@@ -1,0 +1,180 @@
+### ============================================
+### DASHBOARD API TESTS
+### ============================================
+
+### 1. DASHBOARD STATISTICS - SUCCESS CASES
+
+### Get Dashboard Statistics
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+
+### Get Dashboard Statistics with Admin Token
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer admin-access-token-here
+
+### Get Dashboard Statistics with Staff Token
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer staff-access-token-here
+
+### 2. DASHBOARD STATISTICS - ERROR CASES
+
+### Get Dashboard Statistics without Authentication
+GET http://localhost:3000/api/v1/dashboard/stats
+
+### Get Dashboard Statistics with Invalid Token
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer invalid-token
+
+### Get Dashboard Statistics with Expired Token
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer expired-token
+
+### 3. UPCOMING VISITS - SUCCESS CASES
+
+### Get Upcoming Visits (Default Limit)
+GET http://localhost:3000/api/v1/dashboard/upcoming-visits
+Authorization: Bearer valid-access-token-here
+
+### Get Upcoming Visits with Custom Limit
+GET http://localhost:3000/api/v1/dashboard/upcoming-visits?limit=10
+Authorization: Bearer valid-access-token-here
+
+### Get Upcoming Visits with Maximum Limit
+GET http://localhost:3000/api/v1/dashboard/upcoming-visits?limit=100
+Authorization: Bearer valid-access-token-here
+
+### 4. UPCOMING VISITS - ERROR CASES
+
+### Get Upcoming Visits without Authentication
+GET http://localhost:3000/api/v1/dashboard/upcoming-visits
+
+### Get Upcoming Visits with Invalid Limit (Too High)
+GET http://localhost:3000/api/v1/dashboard/upcoming-visits?limit=101
+Authorization: Bearer valid-access-token-here
+
+### Get Upcoming Visits with Invalid Limit (Negative)
+GET http://localhost:3000/api/v1/dashboard/upcoming-visits?limit=-1
+Authorization: Bearer valid-access-token-here
+
+### Get Upcoming Visits with Invalid Limit (Non-Integer)
+GET http://localhost:3000/api/v1/dashboard/upcoming-visits?limit=abc
+Authorization: Bearer valid-access-token-here
+
+### 5. RECENT ACTIVITY - SUCCESS CASES
+
+### Get Recent Activity (Default Limit)
+GET http://localhost:3000/api/v1/dashboard/recent-activity
+Authorization: Bearer valid-access-token-here
+
+### Get Recent Activity with Custom Limit
+GET http://localhost:3000/api/v1/dashboard/recent-activity?limit=20
+Authorization: Bearer valid-access-token-here
+
+### Get Recent Activity with Maximum Limit
+GET http://localhost:3000/api/v1/dashboard/recent-activity?limit=100
+Authorization: Bearer valid-access-token-here
+
+### 6. RECENT ACTIVITY - ERROR CASES
+
+### Get Recent Activity without Authentication
+GET http://localhost:3000/api/v1/dashboard/recent-activity
+
+### Get Recent Activity with Invalid Limit (Too High)
+GET http://localhost:3000/api/v1/dashboard/recent-activity?limit=101
+Authorization: Bearer valid-access-token-here
+
+### Get Recent Activity with Invalid Limit (Zero)
+GET http://localhost:3000/api/v1/dashboard/recent-activity?limit=0
+Authorization: Bearer valid-access-token-here
+
+### Get Recent Activity with Invalid Limit (Non-Integer)
+GET http://localhost:3000/api/v1/dashboard/recent-activity?limit=xyz
+Authorization: Bearer valid-access-token-here
+
+### 7. REVENUE TREND - SUCCESS CASES
+
+### Get Revenue Trend (Default 7 Days)
+GET http://localhost:3000/api/v1/dashboard/revenue-trend
+Authorization: Bearer valid-access-token-here
+
+### Get Revenue Trend for 30 Days
+GET http://localhost:3000/api/v1/dashboard/revenue-trend?days=30
+Authorization: Bearer valid-access-token-here
+
+### Get Revenue Trend for 90 Days
+GET http://localhost:3000/api/v1/dashboard/revenue-trend?days=90
+Authorization: Bearer valid-access-token-here
+
+### Get Revenue Trend for Maximum Period
+GET http://localhost:3000/api/v1/dashboard/revenue-trend?days=365
+Authorization: Bearer valid-access-token-here
+
+### 8. REVENUE TREND - ERROR CASES
+
+### Get Revenue Trend without Authentication
+GET http://localhost:3000/api/v1/dashboard/revenue-trend
+
+### Get Revenue Trend with Invalid Days (Too High)
+GET http://localhost:3000/api/v1/dashboard/revenue-trend?days=366
+Authorization: Bearer valid-access-token-here
+
+### Get Revenue Trend with Invalid Days (Zero)
+GET http://localhost:3000/api/v1/dashboard/revenue-trend?days=0
+Authorization: Bearer valid-access-token-here
+
+### Get Revenue Trend with Invalid Days (Negative)
+GET http://localhost:3000/api/v1/dashboard/revenue-trend?days=-1
+Authorization: Bearer valid-access-token-here
+
+### Get Revenue Trend with Invalid Days (Non-Integer)
+GET http://localhost:3000/api/v1/dashboard/revenue-trend?days=abc
+Authorization: Bearer valid-access-token-here
+
+### 9. RATE LIMITING TESTS
+
+### Test Rate Limiting - Multiple Requests
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+
+###
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+
+###
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+
+###
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+
+###
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+
+### 10. CONTENT TYPE VALIDATION TESTS
+
+### Test with Invalid Content Type
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+Content-Type: text/plain
+
+### Test with Missing Content Type
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+
+### 11. API VERSION VALIDATION TESTS
+
+### Test with Valid API Version
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+api-version: v1
+
+### Test with Invalid API Version
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here
+api-version: v2
+
+### Test with Missing API Version
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer valid-access-token-here

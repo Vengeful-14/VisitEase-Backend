@@ -1,0 +1,55 @@
+### POST to register a new user
+POST http://localhost:3000/api/v1/user/register
+Content-Type: application/json
+
+{
+  "email": "khriziedesilosgmail.com",
+  "name": "Khrizie Desilos",
+  "password": "Password123",
+  "phone": "09323232323",
+  "role": "visitor"
+}
+
+### POST to register an admin user
+POST http://localhost:3000/api/v1/user/register
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "name": "John Admin",
+  "password": "Password123",
+  "phone": "09323232323",
+  "role": "admin"
+}
+
+### POST to register a staff user
+POST http://localhost:3000/api/v1/user/register
+Content-Type: application/json
+
+{
+  "email": "staff@visitease.com",
+  "name": "Sarah Staff",
+  "password": "Password123",
+  "phone": "09323232324",
+  "role": "staff"
+}
+
+### POST to register with minimal data (only required fields)
+POST http://localhost:3000/api/v1/user/register
+Content-Type: application/json
+
+{
+  "email": "minimal@example.com",
+  "name": "Minimal User",
+  "password": "Password123"
+}
+
+### POST to register with invalid data (for testing validation)
+POST http://localhost:3000/api/v1/user/register
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "name": "A",
+  "password": "123"
+}

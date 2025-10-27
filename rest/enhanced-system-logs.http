@@ -1,0 +1,157 @@
+### ============================================
+### ENHANCED SYSTEM LOGS API TESTING
+### Test SystemLog API with enhanced readability
+### ============================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+### Acquire admin token first using rest/login.http
+@adminToken = {{login.response.body.$.data.token}}
+
+### --------------------------------------------
+### 1) GET ENHANCED SYSTEM LOGS
+### --------------------------------------------
+
+### Get all system logs with enhanced readability
+GET {{baseUrl}}/system-logs
+Authorization: Bearer {{adminToken}}
+
+### Get system logs with pagination (enhanced format)
+GET {{baseUrl}}/system-logs?skip=0&limit=5
+Authorization: Bearer {{adminToken}}
+
+### Get system logs filtered by level (enhanced format)
+GET {{baseUrl}}/system-logs?level=info
+Authorization: Bearer {{adminToken}}
+
+### Get system logs filtered by action (enhanced format)
+GET {{baseUrl}}/system-logs?action=slot_created
+Authorization: Bearer {{adminToken}}
+
+### Get system logs for specific user (enhanced format)
+GET {{baseUrl}}/system-logs?userId=user-uuid-here
+Authorization: Bearer {{adminToken}}
+
+### --------------------------------------------
+### 2) EXPECTED ENHANCED RESPONSE FORMAT
+### --------------------------------------------
+
+### Example enhanced response for GET /system-logs:
+# {
+#   "success": true,
+#   "message": "System logs retrieved successfully",
+#   "data": {
+#     "logs": [
+#       {
+#         "id": "uuid-here",
+#         "level": "info",
+#         "message": "[John Smith (admin)] Visit slot created for 2025-12-15 at 10:00:00-11:00:00 (Capacity: 25)",
+#         "originalMessage": "Visit slot created for 2025-12-15 at 10:00:00-11:00:00 (Capacity: 25)",
+#         "context": {
+#           "action": "slot_created",
+#           "slotId": "slot-uuid",
+#           "date": "2025-12-15",
+#           "startTime": "10:00:00",
+#           "endTime": "11:00:00",
+#           "capacity": 25,
+#           "userInfo": {
+#             "id": "user-uuid",
+#             "name": "John Smith",
+#             "email": "john@example.com",
+#             "role": "admin"
+#           },
+#           "formattedDate": "Jan 21, 2025, 06:15:00 AM",
+#           "status": "completed"
+#         },
+#         "userId": "user-uuid",
+#         "ipAddress": "127.0.0.1",
+#         "userAgent": "Mozilla/5.0...",
+#         "createdAt": "2025-01-21T06:15:00.000Z",
+#         "user": {
+#           "id": "user-uuid",
+#           "name": "John Smith",
+#           "email": "john@example.com",
+#           "role": "admin"
+#         }
+#       }
+#     ],
+#     "pagination": {
+#       "total": 150,
+#       "skip": 0,
+#       "limit": 50,
+#       "hasMore": true
+#     }
+#   }
+# }
+
+### --------------------------------------------
+### 3) FRONTEND INTEGRATION EXAMPLES
+### --------------------------------------------
+
+### JavaScript/Fetch example for enhanced logs:
+# const getEnhancedSystemLogs = async (filters = {}) => {
+#   const queryParams = new URLSearchParams();
+#   
+#   if (filters.level) queryParams.append('level', filters.level);
+#   if (filters.userId) queryParams.append('userId', filters.userId);
+#   if (filters.dateFrom) queryParams.append('dateFrom', filters.dateFrom);
+#   if (filters.dateTo) queryParams.append('dateTo', filters.dateTo);
+#   if (filters.action) queryParams.append('action', filters.action);
+#   if (filters.skip) queryParams.append('skip', filters.skip);
+#   if (filters.limit) queryParams.append('limit', filters.limit);
+#
+#   const response = await fetch(
+#     `http://localhost:3000/api/v1/system-logs?${queryParams}`,
+#     {
+#       method: 'GET',
+#       headers: {
+#         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+#         'Content-Type': 'application/json'
+#       }
+#     }
+#   );
+#
+#   const result = await response.json();
+#   
+#   // Enhanced logs now include:
+#   // - Readable messages with user names and roles
+#   // - Formatted dates
+#   // - User information
+#   // - Status information
+#   // - Original message for reference
+#   
+#   return result;
+# };
+
+### --------------------------------------------
+### 4) ENHANCED FEATURES
+### --------------------------------------------
+
+### Key enhancements in the response:
+### 1. READABLE MESSAGES: "[John Smith (admin)] Visit slot created..."
+### 2. USER INFORMATION: Full user details included
+### 3. FORMATTED DATES: "Jan 21, 2025, 06:15:00 AM"
+### 4. STATUS INFO: Action status and completion state
+### 5. ORIGINAL MESSAGE: Unmodified original message preserved
+### 6. CONTEXT ENHANCEMENT: Additional readable context data
+
+### --------------------------------------------
+### 5) FILTERING EXAMPLES
+### --------------------------------------------
+
+### Get logs by specific user (shows user name in message)
+GET {{baseUrl}}/system-logs?userId=user-uuid-here
+Authorization: Bearer {{adminToken}}
+
+### Get logs by action type (shows action in context)
+GET {{baseUrl}}/system-logs?action=booking_created
+Authorization: Bearer {{adminToken}}
+
+### Get logs by level (shows level with readable messages)
+GET {{baseUrl}}/system-logs?level=warn
+Authorization: Bearer {{adminToken}}
+
+### Get logs for date range (shows formatted dates)
+GET {{baseUrl}}/system-logs?dateFrom=2025-01-01&dateTo=2025-01-31
+Authorization: Bearer {{adminToken}}
+

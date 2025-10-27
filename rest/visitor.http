@@ -1,0 +1,437 @@
+### ============================================
+### VISITOR API TESTS
+### ============================================
+
+### 1. GET VISITORS - SUCCESS CASES
+
+### Get All Visitors
+GET http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Search Query
+GET http://localhost:3000/api/v1/visitors?search=John
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Type Filter
+GET http://localhost:3000/api/v1/visitors?type=individual
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Age Group Filter
+GET http://localhost:3000/api/v1/visitors?ageGroup=adult_18_34
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Pagination
+GET http://localhost:3000/api/v1/visitors?skip=0&limit=10
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Multiple Filters
+GET http://localhost:3000/api/v1/visitors?search=John&type=individual&ageGroup=adult_18_34&skip=0&limit=5
+Authorization: Bearer staff-access-token-here
+
+### 2. GET VISITORS - ERROR CASES
+
+### Get Visitors without Authentication
+GET http://localhost:3000/api/v1/visitors
+
+### Get Visitors with Visitor Token (Insufficient Permissions)
+GET http://localhost:3000/api/v1/visitors
+Authorization: Bearer visitor-access-token-here
+
+### Get Visitors with Invalid Type
+GET http://localhost:3000/api/v1/visitors?type=invalid-type
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Invalid Age Group
+GET http://localhost:3000/api/v1/visitors?ageGroup=invalid-age-group
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Invalid Skip (Negative)
+GET http://localhost:3000/api/v1/visitors?skip=-1
+Authorization: Bearer staff-access-token-here
+
+### Get Visitors with Invalid Limit (Too High)
+GET http://localhost:3000/api/v1/visitors?limit=101
+Authorization: Bearer staff-access-token-here
+
+### 3. CREATE VISITOR - SUCCESS CASES
+
+### Create Individual Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "+1234567890",
+  "organization": null,
+  "specialRequirements": null,
+  "ageGroup": "adult_18_34",
+  "addressLine1": "123 Main St",
+  "addressLine2": "Apt 4B",
+  "city": "New York",
+  "state": "NY",
+  "postalCode": "10001",
+  "country": "USA"
+}
+
+### Create Family Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "phone": "+1234567891",
+  "organization": null,
+  "specialRequirements": "Wheelchair accessible",
+  "ageGroup": "adult_35_54",
+  "addressLine1": "456 Oak Ave",
+  "city": "Los Angeles",
+  "state": "CA",
+  "postalCode": "90210",
+  "country": "USA"
+}
+
+### Create Educational Group Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Dr. Sarah Johnson",
+  "email": "sarah.johnson@university.edu",
+  "phone": "+1234567892",
+  "organization": "University of California",
+  "specialRequirements": "Educational tour for 25 students",
+  "ageGroup": "adult_35_54",
+  "addressLine1": "789 University Blvd",
+  "city": "Berkeley",
+  "state": "CA",
+  "postalCode": "94720",
+  "country": "USA"
+}
+
+### Create Corporate Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Mike Wilson",
+  "email": "mike.wilson@company.com",
+  "phone": "+1234567893",
+  "organization": "Tech Corp Inc",
+  "specialRequirements": "VIP tour for executives",
+  "ageGroup": "adult_35_54",
+  "addressLine1": "321 Business Park",
+  "city": "San Francisco",
+  "state": "CA",
+  "postalCode": "94105",
+  "country": "USA"
+}
+
+### Create Visitor with Minimal Data
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Minimal User",
+  "email": "minimal@example.com"
+}
+
+### 4. CREATE VISITOR - ERROR CASES
+
+### Create Visitor without Authentication
+POST http://localhost:3000/api/v1/visitors
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com"
+}
+
+### Create Visitor with Visitor Token (Insufficient Permissions)
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com"
+}
+
+### Create Visitor with Invalid Name (Too Short)
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "A",
+  "email": "john.doe@example.com"
+}
+
+### Create Visitor with Invalid Name (Too Long)
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "This is a very long name that exceeds the maximum allowed length for a visitor name field in the database",
+  "email": "john.doe@example.com"
+}
+
+### Create Visitor with Invalid Email Format
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "invalid-email"
+}
+
+### Create Visitor with Invalid Phone Format
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "invalid-phone"
+}
+
+### Create Visitor with Invalid Organization (Too Long)
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "organization": "This is a very long organization name that exceeds the maximum allowed length for an organization field in the database and should cause a validation error"
+}
+
+### Create Visitor with Invalid Age Group
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "ageGroup": "invalid-age-group"
+}
+
+### Create Visitor with Missing Required Fields
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com"
+}
+
+### Create Visitor with Duplicate Email
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Another John Doe",
+  "email": "john.doe@example.com"
+}
+
+### 5. UPDATE VISITOR - SUCCESS CASES
+
+### Update Visitor with All Fields
+PUT http://localhost:3000/api/v1/visitors/valid-visitor-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe Updated",
+  "email": "john.doe.updated@example.com",
+  "phone": "+1234567899",
+  "organization": "Updated Organization",
+  "specialRequirements": "Updated requirements",
+  "ageGroup": "adult_35_54",
+  "addressLine1": "Updated Address",
+  "addressLine2": "Updated Apt",
+  "city": "Updated City",
+  "state": "Updated State",
+  "postalCode": "Updated Code",
+  "country": "Updated Country"
+}
+
+### Update Visitor with Partial Fields
+PUT http://localhost:3000/api/v1/visitors/valid-visitor-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "phone": "+1234567899",
+  "specialRequirements": "Updated requirements"
+}
+
+### 6. UPDATE VISITOR - ERROR CASES
+
+### Update Visitor without Authentication
+PUT http://localhost:3000/api/v1/visitors/valid-visitor-id
+Content-Type: application/json
+
+{
+  "name": "Updated Name"
+}
+
+### Update Visitor with Invalid ID
+PUT http://localhost:3000/api/v1/visitors/invalid-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Updated Name"
+}
+
+### Update Visitor with Visitor Token (Insufficient Permissions)
+PUT http://localhost:3000/api/v1/visitors/valid-visitor-id
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Updated Name"
+}
+
+### Update Visitor with Invalid Data
+PUT http://localhost:3000/api/v1/visitors/valid-visitor-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "A",
+  "email": "invalid-email",
+  "ageGroup": "invalid-age-group"
+}
+
+### Update Non-existent Visitor
+PUT http://localhost:3000/api/v1/visitors/00000000-0000-0000-0000-000000000000
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Updated Name"
+}
+
+### 7. DELETE VISITOR - SUCCESS CASES
+
+### Delete Visitor
+DELETE http://localhost:3000/api/v1/visitors/valid-visitor-id
+Authorization: Bearer staff-access-token-here
+
+### 8. DELETE VISITOR - ERROR CASES
+
+### Delete Visitor without Authentication
+DELETE http://localhost:3000/api/v1/visitors/valid-visitor-id
+
+### Delete Visitor with Invalid ID
+DELETE http://localhost:3000/api/v1/visitors/invalid-id
+Authorization: Bearer staff-access-token-here
+
+### Delete Visitor with Visitor Token (Insufficient Permissions)
+DELETE http://localhost:3000/api/v1/visitors/valid-visitor-id
+Authorization: Bearer visitor-access-token-here
+
+### Delete Non-existent Visitor
+DELETE http://localhost:3000/api/v1/visitors/00000000-0000-0000-0000-000000000000
+Authorization: Bearer staff-access-token-here
+
+### 9. GET VISITOR STATISTICS - SUCCESS CASES
+
+### Get Visitor Statistics
+GET http://localhost:3000/api/v1/visitors/stats
+Authorization: Bearer staff-access-token-here
+
+### 10. GET VISITOR STATISTICS - ERROR CASES
+
+### Get Visitor Statistics without Authentication
+GET http://localhost:3000/api/v1/visitors/stats
+
+### Get Visitor Statistics with Visitor Token (Insufficient Permissions)
+GET http://localhost:3000/api/v1/visitors/stats
+Authorization: Bearer visitor-access-token-here
+
+### 11. RATE LIMITING TESTS
+
+### Test Rate Limiting - Multiple Create Requests
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Rate Limit Test 1",
+  "email": "ratelimit1@example.com"
+}
+
+###
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Rate Limit Test 2",
+  "email": "ratelimit2@example.com"
+}
+
+###
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Rate Limit Test 3",
+  "email": "ratelimit3@example.com"
+}
+
+###
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Rate Limit Test 4",
+  "email": "ratelimit4@example.com"
+}
+
+###
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Rate Limit Test 5",
+  "email": "ratelimit5@example.com"
+}
+
+### 12. CONTENT TYPE VALIDATION TESTS
+
+### Test with Invalid Content Type
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: text/plain
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com"
+}
+
+### Test with Missing Content Type
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com"
+}

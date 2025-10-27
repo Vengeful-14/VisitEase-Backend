@@ -1,0 +1,631 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  admin
+  staff
+  visitor
+}
+
+enum SlotStatus {
+  available
+  booked
+  cancelled
+  maintenance
+}
+
+enum VisitorType {
+  individual
+  family
+  group
+  educational
+  corporate
+  senior
+}
+
+enum AgeGroup {
+  child_0_12
+  teen_13_17
+  adult_18_34
+  adult_35_54
+  senior_55_plus
+}
+
+enum BookingStatus {
+  tentative
+  confirmed
+  cancelled
+  completed
+  no_show
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+  failed
+}
+
+enum PaymentMethod {
+  credit_card
+  cash
+  online
+  check
+  free
+}
+
+enum EventType {
+  tour
+  maintenance
+  special_event
+  holiday
+  training
+  meeting
+}
+
+enum ConflictType {
+  double_booking
+  overbooking
+  staff_unavailable
+  maintenance_conflict
+  capacity_exceeded
+}
+
+enum ConflictSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum ConflictStatus {
+  pending
+  resolved
+  ignored
+  escalated
+}
+
+enum NotificationType {
+  email
+  sms
+  reminder
+  confirmation
+  cancellation
+  welcome
+  feedback_request
+}
+
+enum RecipientType {
+  user
+  visitor
+  staff
+  admin
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  delivered
+  failed
+  cancelled
+}
+
+enum DeliveryMethod {
+  email
+  sms
+  push
+  in_app
+}
+
+enum DataType {
+  string
+  integer
+  boolean
+  decimal
+  json
+  array
+}
+
+enum RevenueSource {
+  ticket_sales
+  group_tours
+  special_events
+  membership
+  donations
+  merchandise
+}
+
+enum LogLevel {
+  debug
+  info
+  warn
+  error
+  fatal
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  name          String    @db.VarChar(255)
+  avatarUrl     String?   @map("avatar_url") @db.Text
+  role          UserRole  @default(visitor)
+  passwordHash  String?   @map("password_hash") @db.VarChar(255)
+  emailVerified Boolean   @default(false) @map("email_verified")
+  phone         String?   @db.VarChar(20)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz(6)
+  isActive      Boolean   @default(true) @map("is_active")
+
+  // Relations
+  createdVisitSlots    VisitSlot[]
+  createdBookings      Booking[]
+  createdCalendarEvents CalendarEvent[]
+  createdNotifications Notification[]
+  updatedSystemSettings SystemSetting[]
+  resolvedConflicts    ScheduleConflict[]
+  auditLogs           AuditLog[]
+  systemLogs          SystemLog[]
+  oauthProviders      OAuthProvider[]
+  sessions            UserSession[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
+  @@index([lastLoginAt])
+}
+
+model VisitSlot {
+  id              String     @id @default(uuid()) @db.Uuid
+  date            DateTime   @db.Date
+  startTime       String     @map("start_time") @db.VarChar(8) // Format: "HH:MM:SS" or "HH:MM"
+  endTime         String     @map("end_time") @db.VarChar(8)   // Format: "HH:MM:SS" or "HH:MM"
+  durationMinutes Int        @map("duration_minutes")
+  capacity        Int
+  bookedCount     Int        @default(0) @map("booked_count")
+  status          SlotStatus @default(available)
+  description     String?    @db.Text
+  createdBy       String?    @map("created_by") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  creator     User?      @relation(fields: [createdBy], references: [id])
+  bookings    Booking[]
+  conflicts   ScheduleConflict[]
+
+  @@map("visit_slots")
+  @@index([date])
+  @@index([status])
+  @@index([date, status])
+  @@index([createdBy])
+}
+
+model Visitor {
+  id                    String      @id @default(uuid()) @db.Uuid
+  name                  String      @db.VarChar(255)
+  email                 String      @db.VarChar(255)
+  phone                 String?     @db.VarChar(20)
+  organization          String?     @db.VarChar(255)
+  specialRequirements   String?     @map("special_requirements") @db.Text
+  visitorType           VisitorType @default(individual) @map("visitor_type")
+  ageGroup              AgeGroup?   @map("age_group")
+  addressLine1          String?     @map("address_line1") @db.VarChar(255)
+  addressLine2          String?     @map("address_line2") @db.VarChar(255)
+  city                  String?     @db.VarChar(100)
+  state                 String?     @db.VarChar(100)
+  postalCode            String?     @map("postal_code") @db.VarChar(20)
+  country               String      @default("US") @db.VarChar(100)
+  emergencyContactName  String?     @map("emergency_contact_name") @db.VarChar(255)
+  emergencyContactPhone String?     @map("emergency_contact_phone") @db.VarChar(20)
+  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  isActive              Boolean     @default(true) @map("is_active")
+
+  // Relations
+  bookings         Booking[]
+  feedback         VisitorFeedback[]
+  analytics        VisitorAnalytics[]
+  groupMemberships GroupMember[]
+  ledGroups        VisitorGroup[]
+
+  @@map("visitors")
+  @@index([email])
+  @@index([organization])
+  @@index([visitorType])
+  @@index([createdAt])
+}
+
+model Booking {
+  id                  String        @id @default(uuid()) @db.Uuid
+  slotId              String        @map("slot_id") @db.Uuid
+  visitorId           String        @map("visitor_id") @db.Uuid
+  status              BookingStatus @default(tentative)
+  groupSize           Int           @default(1) @map("group_size")
+  totalAmount         Decimal       @default(0.00) @map("total_amount") @db.Decimal(10, 2)
+  paymentStatus       PaymentStatus @default(pending) @map("payment_status")
+  paymentMethod       PaymentMethod? @map("payment_method")
+  notes               String?       @db.Text
+  specialRequests     String?       @map("special_requests") @db.Text
+  createdBy           String?       @map("created_by") @db.Uuid
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  confirmedAt         DateTime?     @map("confirmed_at") @db.Timestamptz(6)
+  cancelledAt         DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  cancellationReason  String?       @map("cancellation_reason") @db.Text
+
+  // Relations
+  slot     VisitSlot        @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  visitor  Visitor          @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  creator  User?            @relation(fields: [createdBy], references: [id])
+  feedback VisitorFeedback[]
+  analytics VisitorAnalytics[]
+
+  @@map("bookings")
+  @@index([slotId])
+  @@index([visitorId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([createdAt, status])
+}
+
+model OAuthProvider {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  provider       String   @db.VarChar(50)
+  providerUserId String   @map("provider_user_id") @db.VarChar(255)
+  accessToken    String?  @map("access_token") @db.Text
+  refreshToken   String?  @map("refresh_token") @db.Text
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("oauth_providers")
+}
+
+model UserSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  sessionToken    String    @unique @map("session_token") @db.VarChar(255)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(6)
+  ipAddress       String?   @map("ip_address") @db.Inet
+  userAgent       String?   @map("user_agent") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastAccessedAt  DateTime  @default(now()) @map("last_accessed_at") @db.Timestamptz(6)
+  isActive        Boolean   @default(true) @map("is_active")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  token     String    @unique @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model CalendarEvent {
+  id              String     @id @default(uuid()) @db.Uuid
+  title           String     @db.VarChar(255)
+  description     String?    @db.Text
+  startDatetime   DateTime   @map("start_datetime") @db.Timestamptz(6)
+  endDatetime     DateTime   @map("end_datetime") @db.Timestamptz(6)
+  eventType       EventType  @map("event_type")
+  status          SlotStatus @default(available)
+  capacity        Int?
+  bookedCount     Int        @default(0) @map("booked_count")
+  color           String?    @db.VarChar(7)
+  isRecurring     Boolean    @default(false) @map("is_recurring")
+  recurrencePattern String?  @map("recurrence_pattern") @db.Text
+  parentEventId   String?    @map("parent_event_id") @db.Uuid
+  createdBy       String?    @map("created_by") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  creator       User?             @relation(fields: [createdBy], references: [id])
+  parentEvent   CalendarEvent?    @relation("EventRecurrence", fields: [parentEventId], references: [id])
+  childEvents   CalendarEvent[]   @relation("EventRecurrence")
+  conflicts     ScheduleConflict[]
+
+  @@map("calendar_events")
+  @@index([startDatetime])
+  @@index([endDatetime])
+  @@index([eventType])
+  @@index([status])
+}
+
+model ScheduleConflict {
+  id               String          @id @default(uuid()) @db.Uuid
+  conflictType     ConflictType    @map("conflict_type")
+  title            String          @db.VarChar(255)
+  description      String?         @db.Text
+  severity         ConflictSeverity
+  status           ConflictStatus  @default(pending)
+  affectedSlotId   String?         @map("affected_slot_id") @db.Uuid
+  affectedEventId  String?         @map("affected_event_id") @db.Uuid
+  resolvedBy       String?         @map("resolved_by") @db.Uuid
+  resolvedAt       DateTime?       @map("resolved_at") @db.Timestamptz(6)
+  resolutionNotes  String?         @map("resolution_notes") @db.Text
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  affectedSlot  VisitSlot?    @relation(fields: [affectedSlotId], references: [id])
+  affectedEvent CalendarEvent? @relation(fields: [affectedEventId], references: [id])
+  resolver      User?         @relation(fields: [resolvedBy], references: [id])
+
+  @@map("schedule_conflicts")
+}
+
+model VisitorGroup {
+  id                    String      @id @default(uuid()) @db.Uuid
+  name                  String      @db.VarChar(255)
+  groupType             VisitorType @map("group_type")
+  leaderId              String?     @map("leader_id") @db.Uuid
+  organization          String?     @db.VarChar(255)
+  totalMembers          Int         @map("total_members")
+  specialRequirements   String?     @map("special_requirements") @db.Text
+  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  leader   Visitor?       @relation(fields: [leaderId], references: [id])
+  members  GroupMember[]
+
+  @@map("visitor_groups")
+}
+
+model GroupMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  visitorId String   @map("visitor_id") @db.Uuid
+  role      String   @default("member") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  group   VisitorGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  visitor Visitor      @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, visitorId])
+  @@map("group_members")
+}
+
+model VisitorFeedback {
+  id             String   @id @default(uuid()) @db.Uuid
+  visitorId      String   @map("visitor_id") @db.Uuid
+  bookingId      String?  @map("booking_id") @db.Uuid
+  rating         Int?
+  feedbackText   String?  @map("feedback_text") @db.Text
+  categories     String[]
+  isPublic       Boolean  @default(false) @map("is_public")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  visitor Visitor @relation(fields: [visitorId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@map("visitor_feedback")
+}
+
+model Notification {
+  id              String            @id @default(uuid()) @db.Uuid
+  type            NotificationType
+  title           String            @db.VarChar(255)
+  message         String            @db.Text
+  recipient       String            @db.VarChar(255)
+  recipientType   RecipientType     @map("recipient_type")
+  scheduledFor    DateTime          @map("scheduled_for") @db.Timestamptz(6)
+  sentAt          DateTime?         @map("sent_at") @db.Timestamptz(6)
+  status          NotificationStatus @default(pending)
+  deliveryMethod  DeliveryMethod    @map("delivery_method")
+  templateId      String?           @map("template_id") @db.Uuid
+  metadata        Json?             @db.JsonB
+  createdBy       String?           @map("created_by") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  creator User? @relation(fields: [createdBy], references: [id])
+
+  @@map("notifications")
+  @@index([recipient])
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([type])
+}
+
+model NotificationTemplate {
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String           @db.VarChar(255)
+  type          NotificationType
+  subject       String?          @db.VarChar(255)
+  bodyTemplate  String           @map("body_template") @db.Text
+  variables     String[]
+  isActive      Boolean          @default(true) @map("is_active")
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("notification_templates")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  settingKey  String   @unique @map("setting_key") @db.VarChar(100)
+  settingValue String  @map("setting_value") @db.Text
+  dataType    DataType @map("data_type")
+  description String?  @db.Text
+  isPublic    Boolean  @default(false) @map("is_public")
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  updater User? @relation(fields: [updatedBy], references: [id])
+
+  @@map("system_settings")
+}
+
+model MuseumHours {
+  id           String    @id @default(uuid()) @db.Uuid
+  dayOfWeek    Int       @map("day_of_week")
+  openTime     DateTime? @map("open_time") @db.Time(6)
+  closeTime    DateTime? @map("close_time") @db.Time(6)
+  isClosed     Boolean   @default(false) @map("is_closed")
+  specialNotes String?   @map("special_notes") @db.Text
+  effectiveDate DateTime? @map("effective_date") @db.Date
+  endDate      DateTime? @map("end_date") @db.Date
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("museum_hours")
+}
+
+model PricingRule {
+  id                        String      @id @default(uuid()) @db.Uuid
+  name                      String      @db.VarChar(255)
+  visitorType               VisitorType? @map("visitor_type")
+  ageGroup                  AgeGroup?   @map("age_group")
+  dayOfWeek                 Int?
+  timeSlotStart             DateTime?   @map("time_slot_start") @db.Time(6)
+  timeSlotEnd               DateTime?   @map("time_slot_end") @db.Time(6)
+  basePrice                 Decimal     @map("base_price") @db.Decimal(10, 2)
+  groupDiscountPercentage   Decimal     @default(0.00) @map("group_discount_percentage") @db.Decimal(5, 2)
+  minGroupSize              Int?        @map("min_group_size")
+  isActive                  Boolean     @default(true) @map("is_active")
+  effectiveDate             DateTime    @map("effective_date") @db.Date
+  endDate                   DateTime?   @map("end_date") @db.Date
+  createdAt                 DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("pricing_rules")
+}
+
+model DailyStatistics {
+  id                    String   @id @default(uuid()) @db.Uuid
+  date                  DateTime @unique @db.Date
+  totalVisitors         Int      @default(0) @map("total_visitors")
+  totalBookings         Int      @default(0) @map("total_bookings")
+  confirmedBookings     Int      @default(0) @map("confirmed_bookings")
+  cancelledBookings     Int      @default(0) @map("cancelled_bookings")
+  noShowBookings        Int      @default(0) @map("no_show_bookings")
+  totalRevenue          Decimal  @default(0.00) @map("total_revenue") @db.Decimal(12, 2)
+  averageGroupSize      Decimal  @default(0.00) @map("average_group_size") @db.Decimal(5, 2)
+  capacityUtilization   Decimal  @default(0.00) @map("capacity_utilization") @db.Decimal(5, 2)
+  peakHour              DateTime? @map("peak_hour") @db.Time(6)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("daily_statistics")
+  @@index([date])
+}
+
+model VisitorAnalytics {
+  id                  String   @id @default(uuid()) @db.Uuid
+  visitorId           String   @map("visitor_id") @db.Uuid
+  visitDate           DateTime @map("visit_date") @db.Date
+  bookingId           String?  @map("booking_id") @db.Uuid
+  timeSpentMinutes    Int?     @map("time_spent_minutes")
+  exhibitsVisited     String[] @map("exhibits_visited")
+  satisfactionRating  Int?
+  wouldRecommend      Boolean?
+  feedbackProvided    Boolean  @default(false) @map("feedback_provided")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  visitor Visitor @relation(fields: [visitorId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@map("visitor_analytics")
+  @@index([visitorId])
+  @@index([visitDate])
+}
+
+model RevenueAnalytics {
+  id                    String        @id @default(uuid()) @db.Uuid
+  date                  DateTime      @db.Date
+  revenueSource         RevenueSource @map("revenue_source")
+  amount                Decimal       @db.Decimal(12, 2)
+  transactionCount      Int           @default(1) @map("transaction_count")
+  averageTransaction    Decimal?      @map("average_transaction") @db.Decimal(10, 2)
+  paymentMethod         PaymentMethod? @map("payment_method")
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("revenue_analytics")
+  @@index([date])
+  @@index([revenueSource])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  tableName  String   @map("table_name") @db.VarChar(100)
+  recordId   String?  @map("record_id") @db.Uuid
+  oldValues  Json?    @map("old_values") @db.JsonB
+  newValues  Json?    @map("new_values") @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.Inet
+  userAgent  String?  @map("user_agent") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+  @@index([userId])
+  @@index([tableName])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model SystemLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  level     LogLevel
+  message   String   @db.Text
+  context   Json?    @db.JsonB
+  userId    String?  @map("user_id") @db.Uuid
+  ipAddress String?  @map("ip_address") @db.Inet
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("system_logs")
+}

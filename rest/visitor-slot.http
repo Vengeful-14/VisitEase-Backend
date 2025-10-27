@@ -1,0 +1,85 @@
+### Book a visitor slot
+POST http://localhost:3000/api/v1/visitor-slot/book
+Content-Type: application/json
+
+{
+  "visitorId": "visitor-uuid-here",
+  "slotId": "slot-uuid-here",
+  "bookingDate": "2024-11-20T00:00:00.000Z",
+  "numberOfPeople": 3,
+  "specialRequests": "Wheelchair accessible entrance required",
+  "notes": "First time visitor"
+}
+
+### Get visitor slot by ID
+GET http://localhost:3000/api/v1/visitor-slot/booking-uuid-here
+Authorization: Bearer your-jwt-token-here
+
+### Get all visitor slots with filters
+GET http://localhost:3000/api/v1/visitor-slot?status=booked&numberOfPeopleMin=2&numberOfPeopleMax=5
+Authorization: Bearer your-jwt-token-here
+
+### Get visitor slots by visitor ID
+GET http://localhost:3000/api/v1/visitor-slot/visitor/visitor-uuid-here
+Authorization: Bearer your-jwt-token-here
+
+### Get visitor slots by slot ID
+GET http://localhost:3000/api/v1/visitor-slot/slot/slot-uuid-here
+Authorization: Bearer your-jwt-token-here
+
+### Check slot availability
+GET http://localhost:3000/api/v1/visitor-slot/availability/slot-uuid-here/2024-11-20
+Authorization: Bearer your-jwt-token-here
+
+### Update visitor slot booking
+PUT http://localhost:3000/api/v1/visitor-slot/booking-uuid-here
+Authorization: Bearer your-jwt-token-here
+Content-Type: application/json
+
+{
+  "numberOfPeople": 4,
+  "specialRequests": "Updated: Wheelchair accessible entrance and audio guide required",
+  "notes": "Updated booking details"
+}
+
+### Cancel visitor slot booking
+PATCH http://localhost:3000/api/v1/visitor-slot/booking-uuid-here/cancel
+Authorization: Bearer your-jwt-token-here
+
+### Delete visitor slot booking
+DELETE http://localhost:3000/api/v1/visitor-slot/booking-uuid-here
+Authorization: Bearer your-jwt-token-here
+
+### Get visitor slot statistics
+GET http://localhost:3000/api/v1/visitor-slot/stats
+Authorization: Bearer your-jwt-token-here
+
+### Book visitor slot with minimal data
+POST http://localhost:3000/api/v1/visitor-slot/book
+Content-Type: application/json
+
+{
+  "visitorId": "visitor-uuid-here",
+  "slotId": "slot-uuid-here",
+  "bookingDate": "2024-11-21T00:00:00.000Z",
+  "numberOfPeople": 1
+}
+
+### Book visitor slot with invalid data (should fail)
+POST http://localhost:3000/api/v1/visitor-slot/book
+Content-Type: application/json
+
+{
+  "visitorId": "invalid-uuid",
+  "slotId": "slot-uuid-here",
+  "bookingDate": "2024-11-20T00:00:00.000Z",
+  "numberOfPeople": 0
+}
+
+### Search visitor slots by date range
+GET http://localhost:3000/api/v1/visitor-slot?bookingDateFrom=2024-11-01T00:00:00.000Z&bookingDateTo=2024-11-30T23:59:59.999Z
+Authorization: Bearer your-jwt-token-here
+
+### Search visitor slots by status
+GET http://localhost:3000/api/v1/visitor-slot?status=cancelled
+Authorization: Bearer your-jwt-token-here

@@ -1,0 +1,346 @@
+### ============================================
+### SCHEDULE API TESTS
+### ============================================
+
+### 1. GET SCHEDULE SLOTS - SUCCESS CASES
+
+### Get All Schedule Slots
+GET http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slots with Date Filter
+GET http://localhost:3000/api/v1/schedule/slots?date=2024-01-15
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slots with Status Filter
+GET http://localhost:3000/api/v1/schedule/slots?status=available
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slots with Pagination
+GET http://localhost:3000/api/v1/schedule/slots?skip=0&limit=10
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slots with Multiple Filters
+GET http://localhost:3000/api/v1/schedule/slots?date=2024-01-15&status=available&skip=0&limit=5
+Authorization: Bearer valid-access-token-here
+
+### 2. GET SCHEDULE SLOTS - ERROR CASES
+
+### Get Schedule Slots without Authentication
+GET http://localhost:3000/api/v1/schedule/slots
+
+### Get Schedule Slots with Invalid Date Format
+GET http://localhost:3000/api/v1/schedule/slots?date=invalid-date
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slots with Invalid Status
+GET http://localhost:3000/api/v1/schedule/slots?status=invalid-status
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slots with Invalid Skip (Negative)
+GET http://localhost:3000/api/v1/schedule/slots?skip=-1
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slots with Invalid Limit (Too High)
+GET http://localhost:3000/api/v1/schedule/slots?limit=101
+Authorization: Bearer valid-access-token-here
+
+### 3. GET SCHEDULE SLOT BY ID - SUCCESS CASES
+
+### Get Schedule Slot by Valid ID
+GET http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Authorization: Bearer valid-access-token-here
+
+### 4. GET SCHEDULE SLOT BY ID - ERROR CASES
+
+### Get Schedule Slot without Authentication
+GET http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+
+### Get Schedule Slot with Invalid ID Format
+GET http://localhost:3000/api/v1/schedule/slots/invalid-id
+Authorization: Bearer valid-access-token-here
+
+### Get Schedule Slot with Non-existent ID
+GET http://localhost:3000/api/v1/schedule/slots/00000000-0000-0000-0000-000000000000
+Authorization: Bearer valid-access-token-here
+
+### 5. CREATE SCHEDULE SLOT - SUCCESS CASES
+
+### Create Schedule Slot with All Fields
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20,
+  "status": "available",
+  "description": "Morning tour slot"
+}
+
+### Create Schedule Slot with Minimal Fields
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-16",
+  "startTime": "10:00",
+  "endTime": "11:00",
+  "duration": 60,
+  "capacity": 15
+}
+
+### 6. CREATE SCHEDULE SLOT - ERROR CASES
+
+### Create Schedule Slot without Authentication
+POST http://localhost:3000/api/v1/schedule/slots
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20
+}
+
+### Create Schedule Slot with Visitor Token (Insufficient Permissions)
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20
+}
+
+### Create Schedule Slot with Invalid Date (Past Date)
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2020-01-01",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20
+}
+
+### Create Schedule Slot with Invalid Time Format
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "25:00",
+  "endTime": "26:00",
+  "duration": 60,
+  "capacity": 20
+}
+
+### Create Schedule Slot with End Time Before Start Time
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "10:00",
+  "endTime": "09:00",
+  "duration": 60,
+  "capacity": 20
+}
+
+### Create Schedule Slot with Invalid Duration (Too Short)
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 10,
+  "capacity": 20
+}
+
+### Create Schedule Slot with Invalid Duration (Too Long)
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 500,
+  "capacity": 20
+}
+
+### Create Schedule Slot with Invalid Capacity (Zero)
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 0
+}
+
+### Create Schedule Slot with Invalid Capacity (Too High)
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 1001
+}
+
+### Create Schedule Slot with Invalid Status
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20,
+  "status": "invalid-status"
+}
+
+### Create Schedule Slot with Missing Required Fields
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15"
+}
+
+### 7. UPDATE SCHEDULE SLOT - SUCCESS CASES
+
+### Update Schedule Slot with All Fields
+PUT http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-16",
+  "startTime": "10:00",
+  "endTime": "11:00",
+  "duration": 60,
+  "capacity": 25,
+  "status": "booked",
+  "description": "Updated tour slot"
+}
+
+### Update Schedule Slot with Partial Fields
+PUT http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "capacity": 30,
+  "status": "maintenance"
+}
+
+### 8. UPDATE SCHEDULE SLOT - ERROR CASES
+
+### Update Schedule Slot without Authentication
+PUT http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Content-Type: application/json
+
+{
+  "capacity": 30
+}
+
+### Update Schedule Slot with Invalid ID
+PUT http://localhost:3000/api/v1/schedule/slots/invalid-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "capacity": 30
+}
+
+### Update Schedule Slot with Visitor Token (Insufficient Permissions)
+PUT http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "capacity": 30
+}
+
+### Update Schedule Slot with Invalid Data
+PUT http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "capacity": -1,
+  "status": "invalid-status"
+}
+
+### 9. DELETE SCHEDULE SLOT - SUCCESS CASES
+
+### Delete Schedule Slot
+DELETE http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Authorization: Bearer staff-access-token-here
+
+### 10. DELETE SCHEDULE SLOT - ERROR CASES
+
+### Delete Schedule Slot without Authentication
+DELETE http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+
+### Delete Schedule Slot with Invalid ID
+DELETE http://localhost:3000/api/v1/schedule/slots/invalid-id
+Authorization: Bearer staff-access-token-here
+
+### Delete Schedule Slot with Visitor Token (Insufficient Permissions)
+DELETE http://localhost:3000/api/v1/schedule/slots/valid-slot-id
+Authorization: Bearer visitor-access-token-here
+
+### 11. GET SCHEDULE STATISTICS - SUCCESS CASES
+
+### Get Schedule Statistics
+GET http://localhost:3000/api/v1/schedule/statistics
+Authorization: Bearer valid-access-token-here
+
+### 12. GET SCHEDULE STATISTICS - ERROR CASES
+
+### Get Schedule Statistics without Authentication
+GET http://localhost:3000/api/v1/schedule/statistics
+
+### 13. GET SCHEDULE ISSUES - SUCCESS CASES
+
+### Get Schedule Issues
+GET http://localhost:3000/api/v1/schedule/issues
+Authorization: Bearer staff-access-token-here
+
+### 14. GET SCHEDULE ISSUES - ERROR CASES
+
+### Get Schedule Issues without Authentication
+GET http://localhost:3000/api/v1/schedule/issues
+
+### Get Schedule Issues with Visitor Token (Insufficient Permissions)
+GET http://localhost:3000/api/v1/schedule/issues
+Authorization: Bearer visitor-access-token-here

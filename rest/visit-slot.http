@@ -1,0 +1,155 @@
+### ============================================
+### VISIT SLOT (Schedule Slots) - COMPLETE TESTS
+### Base: /api/v1/schedule/slots
+### ============================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+### Acquire tokens first using rest/login.http
+@adminToken = {{login.response.body.$.data.token}}
+@staffToken = {{login.response.body.$.data.token}}
+@visitorToken = {{login.response.body.$.data.token}}
+
+### --------------------------------------------
+### 1) CREATE SLOTS (Staff/Admin)
+### --------------------------------------------
+
+### Create Monday Morning Slot (NEW STRING TIME FORMAT)
+# @name createSlot1
+POST {{baseUrl}}/schedule/slots
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "date": "2025-12-01",
+  "startTime": "09:00:00",
+  "endTime": "10:00:00",
+  "durationMinutes": 60,
+  "capacity": 20,
+  "status": "available",
+  "description": "Mon morning slot"
+}
+
+> {% const body = JSON.parse(response.body); client.global.set("slot1Id", body.data?.id || body.id); %}
+
+### Create Monday Late Morning Slot (NEW STRING TIME FORMAT)
+# @name createSlot2
+POST {{baseUrl}}/schedule/slots
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "date": "2025-12-01",
+  "startTime": "10:00:00",
+  "endTime": "11:00:00",
+  "durationMinutes": 60,
+  "capacity": 15,
+  "status": "available",
+  "description": "Mon late morning slot"
+}
+
+> {% const body = JSON.parse(response.body); client.global.set("slot2Id", body.data?.id || body.id); %}
+
+### --------------------------------------------
+### 2) GET SLOTS (All Authenticated)
+### --------------------------------------------
+
+### Get All Slots
+GET {{baseUrl}}/schedule/slots
+Authorization: Bearer {{visitorToken}}
+
+### Get Slots with Filters
+GET {{baseUrl}}/schedule/slots?date=2025-12-01&status=available&skip=0&limit=10
+Authorization: Bearer {{visitorToken}}
+
+### Get Slot by ID
+GET {{baseUrl}}/schedule/slots/{{slot1Id}}
+Authorization: Bearer {{visitorToken}}
+
+### --------------------------------------------
+### 3) UPDATE SLOTS (Staff/Admin)
+### --------------------------------------------
+
+### Update Capacity and Description
+PUT {{baseUrl}}/schedule/slots/{{slot1Id}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "capacity": 25,
+  "description": "Updated capacity to 25"
+}
+
+### Change Status
+PUT {{baseUrl}}/schedule/slots/{{slot2Id}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "status": "maintenance"
+}
+
+### --------------------------------------------
+### 4) DELETE SLOTS (Staff/Admin)
+### --------------------------------------------
+
+### Delete Slot 2
+DELETE {{baseUrl}}/schedule/slots/{{slot2Id}}
+Authorization: Bearer {{staffToken}}
+
+### --------------------------------------------
+### 5) STATS AND ISSUES
+### --------------------------------------------
+
+### Get Schedule Statistics
+GET {{baseUrl}}/schedule/statistics
+Authorization: Bearer {{staffToken}}
+
+### Get Schedule Issues
+GET {{baseUrl}}/schedule/issues
+Authorization: Bearer {{staffToken}}
+
+### --------------------------------------------
+### 6) ERROR CASES
+### --------------------------------------------
+
+### Create Slot with Visitor Token (Forbidden)
+POST {{baseUrl}}/schedule/slots
+Authorization: Bearer {{visitorToken}}
+Content-Type: application/json
+
+{
+  "date": "2025-12-02",
+  "startTime": "2025-12-02T09:00:00.000Z",
+  "endTime": "2025-12-02T10:00:00.000Z",
+  "durationMinutes": 60,
+  "capacity": 20
+}
+
+### Get Slots without Token (Unauthorized)
+GET {{baseUrl}}/schedule/slots
+
+### Update Slot with Invalid ID
+PUT {{baseUrl}}/schedule/slots/invalid-id
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "capacity": 30
+}
+
+### Create Slot with Past Date (Validation Error)
+POST {{baseUrl}}/schedule/slots
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "date": "2020-01-01",
+  "startTime": "2020-01-01T09:00:00.000Z",
+  "endTime": "2020-01-01T10:00:00.000Z",
+  "durationMinutes": 60,
+  "capacity": 20
+}
+
+
+

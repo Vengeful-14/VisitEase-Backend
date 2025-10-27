@@ -1,0 +1,162 @@
+### ============================================
+### SYSTEM LOGS API TESTING
+### Test all SystemLog API endpoints
+### ============================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+### Acquire admin token first using rest/login.http
+@adminToken = {{login.response.body.$.data.token}}
+
+### --------------------------------------------
+### 1) GET ALL SYSTEM LOGS
+### --------------------------------------------
+
+### Get all system logs (default pagination)
+GET {{baseUrl}}/system-logs
+Authorization: Bearer {{adminToken}}
+
+### Get system logs with pagination
+GET {{baseUrl}}/system-logs?skip=0&limit=10
+Authorization: Bearer {{adminToken}}
+
+### Get system logs filtered by level
+GET {{baseUrl}}/system-logs?level=info
+Authorization: Bearer {{adminToken}}
+
+### Get system logs filtered by action
+GET {{baseUrl}}/system-logs?action=slot_created
+Authorization: Bearer {{adminToken}}
+
+### Get system logs filtered by date range
+GET {{baseUrl}}/system-logs?dateFrom=2025-01-01&dateTo=2025-12-31
+Authorization: Bearer {{adminToken}}
+
+### Get system logs filtered by user
+GET {{baseUrl}}/system-logs?userId=user-uuid-here
+Authorization: Bearer {{adminToken}}
+
+### --------------------------------------------
+### 2) GET SPECIFIC SYSTEM LOG
+### --------------------------------------------
+
+### Get a specific system log by ID
+GET {{baseUrl}}/system-logs/log-id-here
+Authorization: Bearer {{adminToken}}
+
+### --------------------------------------------
+### 3) GET SYSTEM LOG STATISTICS
+### --------------------------------------------
+
+### Get system log statistics overview
+GET {{baseUrl}}/system-logs/stats/overview
+Authorization: Bearer {{adminToken}}
+
+### Get system log statistics for date range
+GET {{baseUrl}}/system-logs/stats/overview?dateFrom=2025-01-01&dateTo=2025-12-31
+Authorization: Bearer {{adminToken}}
+
+### --------------------------------------------
+### 4) CLEANUP OLD SYSTEM LOGS
+### --------------------------------------------
+
+### Delete logs older than 90 days (default)
+DELETE {{baseUrl}}/system-logs/cleanup
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### Delete logs older than 30 days
+DELETE {{baseUrl}}/system-logs/cleanup
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "days": 30
+}
+
+### --------------------------------------------
+### 5) TEST ERROR CASES
+### --------------------------------------------
+
+### Try to access without authentication (should fail)
+GET {{baseUrl}}/system-logs
+
+### Try to access with non-admin user (should fail)
+GET {{baseUrl}}/system-logs
+Authorization: Bearer {{visitorToken}}
+
+### Try invalid UUID for log ID (should fail)
+GET {{baseUrl}}/system-logs/invalid-uuid
+Authorization: Bearer {{adminToken}}
+
+### Try invalid level filter (should fail)
+GET {{baseUrl}}/system-logs?level=invalid
+Authorization: Bearer {{adminToken}}
+
+### Try invalid date format (should fail)
+GET {{baseUrl}}/system-logs?dateFrom=invalid-date
+Authorization: Bearer {{adminToken}}
+
+### Try invalid limit (should fail)
+GET {{baseUrl}}/system-logs?limit=200
+Authorization: Bearer {{adminToken}}
+
+### --------------------------------------------
+### 6) EXPECTED RESPONSES
+### --------------------------------------------
+
+### Example successful response for GET /system-logs:
+# {
+#   "success": true,
+#   "message": "System logs retrieved successfully",
+#   "data": {
+#     "logs": [
+#       {
+#         "id": "uuid-here",
+#         "level": "info",
+#         "message": "Visit slot created for 2025-12-15 at 10:00:00-11:00:00 (Capacity: 25)",
+#         "context": {
+#           "action": "slot_created",
+#           "slotId": "slot-uuid",
+#           "date": "2025-12-15",
+#           "startTime": "10:00:00",
+#           "endTime": "11:00:00",
+#           "capacity": 25
+#         },
+#         "userId": "user-uuid",
+#         "ipAddress": "127.0.0.1",
+#         "userAgent": "Mozilla/5.0...",
+#         "createdAt": "2025-01-21T06:15:00.000Z"
+#       }
+#     ],
+#     "pagination": {
+#       "total": 150,
+#       "skip": 0,
+#       "limit": 50,
+#       "hasMore": true
+#     }
+#   }
+# }
+
+### Example successful response for GET /system-logs/stats/overview:
+# {
+#   "success": true,
+#   "message": "System log statistics retrieved successfully",
+#   "data": {
+#     "totalLogs": 150,
+#     "logsByLevel": [
+#       { "level": "info", "count": 120 },
+#       { "level": "warn", "count": 20 },
+#       { "level": "error", "count": 10 }
+#     ],
+#     "recentLogs": 15,
+#     "topActions": [
+#       { "action": "slot_created", "count": 45 },
+#       { "action": "booking_created", "count": 30 },
+#       { "action": "slot_updated", "count": 25 }
+#     ]
+#   }
+# }
+

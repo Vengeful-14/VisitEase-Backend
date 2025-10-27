@@ -1,0 +1,780 @@
+### ============================================
+### COMPREHENSIVE DATA SEEDING SCRIPT
+### ============================================
+### This file contains the complete data seeding flow
+### Execute requests in order to avoid conflicts
+
+### ============================================
+### PHASE 1: USER REGISTRATION AND AUTHENTICATION
+### ============================================
+
+### 1.1 Register Admin User
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "name": "John Admin",
+  "password": "Password123",
+  "phone": "+1234567890",
+  "role": "admin"
+}
+
+### 1.2 Register Staff User
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "staff@visitease.com",
+  "name": "Sarah Staff",
+  "password": "Password123",
+  "phone": "+1234567891",
+  "role": "staff"
+}
+
+### 1.3 Register Visitor User
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "visitor@visitease.com",
+  "name": "Mike Visitor",
+  "password": "Password123",
+  "phone": "+1234567892",
+  "role": "visitor"
+}
+
+### 1.4 Login Admin User (Save the access token)
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "password": "Password123"
+}
+
+### 1.5 Login Staff User (Save the access token)
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@visitease.com",
+  "password": "Password123"
+}
+
+### 1.6 Login Visitor User (Save the access token)
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "visitor@visitease.com",
+  "password": "Password123"
+}
+
+### ============================================
+### PHASE 2: CREATE VISIT SLOTS (SCHEDULE)
+### ============================================
+
+### 2.1 Create Morning Slot - Day 1
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20,
+  "status": "available",
+  "description": "Morning tour slot - Day 1"
+}
+
+### 2.2 Create Late Morning Slot - Day 1
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "10:00",
+  "endTime": "11:00",
+  "duration": 60,
+  "capacity": 15,
+  "status": "available",
+  "description": "Late morning tour slot - Day 1"
+}
+
+### 2.3 Create Afternoon Slot - Day 1
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "14:00",
+  "endTime": "15:00",
+  "duration": 60,
+  "capacity": 25,
+  "status": "available",
+  "description": "Afternoon tour slot - Day 1"
+}
+
+### 2.4 Create Evening Slot - Day 1
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-15",
+  "startTime": "15:00",
+  "endTime": "16:00",
+  "duration": 60,
+  "capacity": 20,
+  "status": "available",
+  "description": "Evening tour slot - Day 1"
+}
+
+### 2.5 Create Morning Slot - Day 2
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-16",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20,
+  "status": "available",
+  "description": "Morning tour slot - Day 2"
+}
+
+### 2.6 Create Afternoon Slot - Day 2
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-16",
+  "startTime": "14:00",
+  "endTime": "15:00",
+  "duration": 60,
+  "capacity": 25,
+  "status": "available",
+  "description": "Afternoon tour slot - Day 2"
+}
+
+### 2.7 Create Morning Slot - Day 3
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-17",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "duration": 60,
+  "capacity": 20,
+  "status": "available",
+  "description": "Morning tour slot - Day 3"
+}
+
+### 2.8 Create Afternoon Slot - Day 3
+POST http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "date": "2024-01-17",
+  "startTime": "14:00",
+  "endTime": "15:00",
+  "duration": 60,
+  "capacity": 25,
+  "status": "available",
+  "description": "Afternoon tour slot - Day 3"
+}
+
+### ============================================
+### PHASE 3: CREATE VISITORS
+### ============================================
+
+### 3.1 Create Individual Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "+1234567893",
+  "organization": null,
+  "specialRequirements": null,
+  "ageGroup": "adult_18_34",
+  "addressLine1": "123 Main St",
+  "addressLine2": "Apt 4B",
+  "city": "New York",
+  "state": "NY",
+  "postalCode": "10001",
+  "country": "USA"
+}
+
+### 3.2 Create Family Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "phone": "+1234567894",
+  "organization": null,
+  "specialRequirements": "Wheelchair accessible",
+  "ageGroup": "adult_35_54",
+  "addressLine1": "456 Oak Ave",
+  "city": "Los Angeles",
+  "state": "CA",
+  "postalCode": "90210",
+  "country": "USA"
+}
+
+### 3.3 Create Educational Group Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Dr. Sarah Johnson",
+  "email": "sarah.johnson@university.edu",
+  "phone": "+1234567895",
+  "organization": "University of California",
+  "specialRequirements": "Educational tour for 25 students",
+  "ageGroup": "adult_35_54",
+  "addressLine1": "789 University Blvd",
+  "city": "Berkeley",
+  "state": "CA",
+  "postalCode": "94720",
+  "country": "USA"
+}
+
+### 3.4 Create Corporate Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Mike Wilson",
+  "email": "mike.wilson@company.com",
+  "phone": "+1234567896",
+  "organization": "Tech Corp Inc",
+  "specialRequirements": "VIP tour for executives",
+  "ageGroup": "adult_35_54",
+  "addressLine1": "321 Business Park",
+  "city": "San Francisco",
+  "state": "CA",
+  "postalCode": "94105",
+  "country": "USA"
+}
+
+### 3.5 Create Senior Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Robert Brown",
+  "email": "robert.brown@example.com",
+  "phone": "+1234567897",
+  "organization": null,
+  "specialRequirements": "Senior citizen discount",
+  "ageGroup": "senior_55_plus",
+  "addressLine1": "789 Pine St",
+  "city": "Seattle",
+  "state": "WA",
+  "postalCode": "98101",
+  "country": "USA"
+}
+
+### 3.6 Create Teen Visitor
+POST http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Emily Davis",
+  "email": "emily.davis@example.com",
+  "phone": "+1234567898",
+  "organization": null,
+  "specialRequirements": "Student ID required",
+  "ageGroup": "teen_13_17",
+  "addressLine1": "321 Elm St",
+  "city": "Portland",
+  "state": "OR",
+  "postalCode": "97201",
+  "country": "USA"
+}
+
+### ============================================
+### PHASE 4: CREATE BOOKINGS
+### ============================================
+
+### 4.1 Create Individual Booking (Slot 1)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-1-id",
+  "slotId": "valid-slot-1-id",
+  "groupSize": 1,
+  "totalAmount": 25.00,
+  "paymentMethod": "credit_card",
+  "specialRequests": "Wheelchair accessible tour"
+}
+
+### 4.2 Create Family Booking (Slot 2)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-2-id",
+  "slotId": "valid-slot-2-id",
+  "groupSize": 4,
+  "totalAmount": 100.00,
+  "paymentMethod": "cash",
+  "specialRequests": "Family with two children under 12"
+}
+
+### 4.3 Create Educational Group Booking (Slot 3)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-3-id",
+  "slotId": "valid-slot-3-id",
+  "groupSize": 25,
+  "totalAmount": 500.00,
+  "paymentMethod": "online",
+  "specialRequests": "Educational tour for university students"
+}
+
+### 4.4 Create Corporate Booking (Slot 4)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-4-id",
+  "slotId": "valid-slot-4-id",
+  "groupSize": 8,
+  "totalAmount": 200.00,
+  "paymentMethod": "credit_card",
+  "specialRequests": "VIP tour for executives"
+}
+
+### 4.5 Create Senior Booking (Slot 5)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-5-id",
+  "slotId": "valid-slot-5-id",
+  "groupSize": 2,
+  "totalAmount": 40.00,
+  "paymentMethod": "cash",
+  "specialRequests": "Senior citizen discount"
+}
+
+### 4.6 Create Teen Booking (Slot 6)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-6-id",
+  "slotId": "valid-slot-6-id",
+  "groupSize": 1,
+  "totalAmount": 15.00,
+  "paymentMethod": "online",
+  "specialRequests": "Student ID required"
+}
+
+### ============================================
+### PHASE 5: CREATE NOTIFICATION TEMPLATES
+### ============================================
+
+### 5.1 Create Booking Confirmation Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Booking Confirmation Template",
+  "type": "booking_confirmation",
+  "subject": "Booking Confirmed - VisitEase Museum",
+  "bodyTemplate": "Dear John Doe, your booking for 2024-01-15 at 09:00 has been confirmed. Booking ID: valid-booking-1-id. Please arrive 15 minutes early.",
+  "variables": ["museumName", "visitorName", "visitDate", "visitTime", "bookingId"]
+}
+
+### 5.2 Create Booking Reminder Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Booking Reminder Template",
+  "type": "booking_reminder",
+  "subject": "Reminder: Your Visit Tomorrow",
+  "bodyTemplate": "Hi John Doe, this is a reminder that you have a visit scheduled for tomorrow at 09:00. Please arrive 15 minutes early. If you need to cancel, please contact us at least 24 hours in advance.",
+  "variables": ["visitorName", "visitTime"]
+}
+
+### 5.3 Create Booking Cancellation Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Booking Cancellation Template",
+  "type": "booking_cancellation",
+  "subject": "Booking Cancelled - VisitEase Museum",
+  "bodyTemplate": "Dear John Doe, your booking for 2024-01-15 at 09:00 has been cancelled. Reason: Change of plans. If you have any questions, please contact us.",
+  "variables": ["museumName", "visitorName", "visitDate", "visitTime", "cancellationReason"]
+}
+
+### 5.4 Create Payment Reminder Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Payment Reminder Template",
+  "type": "payment_reminder",
+  "subject": "Payment Reminder - VisitEase Museum",
+  "bodyTemplate": "Dear John Doe, this is a reminder that payment for your booking (ID: valid-booking-1-id) is due. Amount: $25.00. Please complete payment before your visit.",
+  "variables": ["museumName", "visitorName", "bookingId", "amount"]
+}
+
+### 5.5 Create General Announcement Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "General Announcement Template",
+  "type": "general_announcement",
+  "subject": "Museum Closure Notice",
+  "bodyTemplate": "The museum will be closed on January 20th for maintenance",
+  "variables": ["announcementTitle", "announcementMessage"]
+}
+
+### 5.6 Create Maintenance Alert Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Maintenance Alert Template",
+  "type": "maintenance_alert",
+  "subject": "Maintenance Alert - VisitEase Museum",
+  "bodyTemplate": "Attention: Scheduled maintenance will begin at 6:00 PM today. Expected duration: 2 hours. We apologize for any inconvenience.",
+  "variables": ["museumName", "maintenanceMessage", "duration"]
+}
+
+### ============================================
+### PHASE 6: CREATE NOTIFICATIONS
+### ============================================
+
+### 6.1 Create Booking Confirmation Notification
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "booking_confirmation",
+  "title": "Booking Confirmation",
+  "message": "Your booking has been confirmed for tomorrow at 2:00 PM",
+  "recipient": "john.doe@example.com",
+  "scheduledFor": "2024-01-15T10:00:00Z",
+  "deliveryMethod": "email",
+  "templateId": "valid-template-1-id",
+  "metadata": {
+    "bookingId": "valid-booking-1-id",
+    "slotId": "valid-slot-1-id",
+    "museumName": "VisitEase Museum",
+    "visitorName": "John Doe",
+    "visitDate": "2024-01-15",
+    "visitTime": "09:00"
+  }
+}
+
+### 6.2 Create Booking Reminder Notification
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "booking_reminder",
+  "title": "Booking Reminder",
+  "message": "Don't forget your visit tomorrow at 10:00 AM",
+  "recipient": "+1234567894",
+  "scheduledFor": "2024-01-15T08:00:00Z",
+  "deliveryMethod": "sms",
+  "templateId": "valid-template-2-id",
+  "metadata": {
+    "bookingId": "valid-booking-2-id",
+    "visitorName": "Jane Smith",
+    "visitTime": "10:00"
+  }
+}
+
+### 6.3 Create General Announcement
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Museum Closure Notice",
+  "message": "The museum will be closed on January 20th for maintenance",
+  "recipient": "all_visitors",
+  "deliveryMethod": "all",
+  "templateId": "valid-template-5-id",
+  "metadata": {
+    "announcementType": "closure",
+    "announcementTitle": "Museum Closure Notice",
+    "announcementMessage": "The museum will be closed on January 20th for maintenance. We apologize for any inconvenience."
+  }
+}
+
+### 6.4 Create Maintenance Alert
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "maintenance_alert",
+  "title": "Maintenance Alert",
+  "message": "Scheduled maintenance will begin at 6:00 PM today",
+  "recipient": "staff@museum.com",
+  "deliveryMethod": "in_app",
+  "templateId": "valid-template-6-id",
+  "metadata": {
+    "maintenanceType": "scheduled",
+    "museumName": "VisitEase Museum",
+    "maintenanceMessage": "Scheduled maintenance will begin at 6:00 PM today",
+    "duration": "2 hours"
+  }
+}
+
+### ============================================
+### PHASE 7: CONFIRM BOOKINGS
+### ============================================
+
+### 7.1 Confirm Individual Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-1-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 7.2 Confirm Family Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-2-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 7.3 Confirm Educational Group Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-3-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 7.4 Confirm Corporate Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-4-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 7.5 Confirm Senior Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-5-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 7.6 Confirm Teen Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-6-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### ============================================
+### PHASE 8: SEND NOTIFICATIONS
+### ============================================
+
+### 8.1 Send Booking Confirmation Notification
+PUT http://localhost:3000/api/v1/notifications/valid-notification-1-id/send
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 8.2 Send Booking Reminder Notification
+PUT http://localhost:3000/api/v1/notifications/valid-notification-2-id/send
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 8.3 Send General Announcement
+PUT http://localhost:3000/api/v1/notifications/valid-notification-3-id/send
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 8.4 Send Maintenance Alert
+PUT http://localhost:3000/api/v1/notifications/valid-notification-4-id/send
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### ============================================
+### PHASE 9: VERIFY DATA INTEGRITY
+### ============================================
+
+### 9.1 Get Dashboard Statistics
+GET http://localhost:3000/api/v1/dashboard/stats
+Authorization: Bearer admin-access-token-here
+
+### 9.2 Get Schedule Statistics
+GET http://localhost:3000/api/v1/schedule/statistics
+Authorization: Bearer staff-access-token-here
+
+### 9.3 Get Visitor Statistics
+GET http://localhost:3000/api/v1/visitors/stats
+Authorization: Bearer staff-access-token-here
+
+### 9.4 Get All Bookings
+GET http://localhost:3000/api/v1/bookings
+Authorization: Bearer staff-access-token-here
+
+### 9.5 Get All Notifications
+GET http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+
+### 9.6 Get All Schedule Slots
+GET http://localhost:3000/api/v1/schedule/slots
+Authorization: Bearer staff-access-token-here
+
+### 9.7 Get All Visitors
+GET http://localhost:3000/api/v1/visitors
+Authorization: Bearer staff-access-token-here
+
+### ============================================
+### PHASE 10: TEST ERROR SCENARIOS
+### ============================================
+
+### 10.1 Try to Create Booking for Full Slot
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-1-id",
+  "slotId": "valid-slot-1-id",
+  "groupSize": 25,
+  "totalAmount": 625.00,
+  "paymentMethod": "credit_card",
+  "specialRequests": "This should fail - slot is full"
+}
+
+### 10.2 Try to Create Booking with Invalid Visitor ID
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "invalid-visitor-id",
+  "slotId": "valid-slot-7-id",
+  "groupSize": 1,
+  "totalAmount": 25.00,
+  "paymentMethod": "credit_card"
+}
+
+### 10.3 Try to Create Booking with Invalid Slot ID
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-1-id",
+  "slotId": "invalid-slot-id",
+  "groupSize": 1,
+  "totalAmount": 25.00,
+  "paymentMethod": "credit_card"
+}
+
+### 10.4 Try to Access Admin Endpoint with Visitor Token
+GET http://localhost:3000/api/v1/visitors/stats
+Authorization: Bearer visitor-access-token-here
+
+### 10.5 Try to Access Protected Endpoint without Token
+GET http://localhost:3000/api/v1/dashboard/stats
+
+### ============================================
+### PHASE 11: CLEANUP (Optional)
+### ============================================
+
+### 11.1 Cancel a Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-6-id/cancel
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "reason": "Change of plans"
+}
+
+### 11.2 Delete a Visitor
+DELETE http://localhost:3000/api/v1/visitors/valid-visitor-6-id
+Authorization: Bearer staff-access-token-here
+
+### 11.3 Delete a Schedule Slot
+DELETE http://localhost:3000/api/v1/schedule/slots/valid-slot-8-id
+Authorization: Bearer staff-access-token-here
+
+### 11.4 Logout All Users
+POST http://localhost:3000/api/v1/auth/logout
+Authorization: Bearer admin-access-token-here
+Content-Type: application/json
+
+{
+  "sessionToken": "admin-session-token-here"
+}
+
+###
+POST http://localhost:3000/api/v1/auth/logout
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "sessionToken": "staff-session-token-here"
+}
+
+###
+POST http://localhost:3000/api/v1/auth/logout
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "sessionToken": "visitor-session-token-here"
+}

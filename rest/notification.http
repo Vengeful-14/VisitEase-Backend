@@ -1,0 +1,711 @@
+### ============================================
+### NOTIFICATION API TESTS
+### ============================================
+
+### 1. GET NOTIFICATIONS - SUCCESS CASES
+
+### Get All Notifications
+GET http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Type Filter
+GET http://localhost:3000/api/v1/notifications?type=booking_confirmation
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Status Filter
+GET http://localhost:3000/api/v1/notifications?status=pending
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Delivery Method Filter
+GET http://localhost:3000/api/v1/notifications?deliveryMethod=email
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Recipient Filter
+GET http://localhost:3000/api/v1/notifications?recipient=visitor@example.com
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Date Range
+GET http://localhost:3000/api/v1/notifications?dateFrom=2024-01-01&dateTo=2024-12-31
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Pagination
+GET http://localhost:3000/api/v1/notifications?skip=0&limit=10
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Multiple Filters
+GET http://localhost:3000/api/v1/notifications?type=booking_confirmation&status=sent&deliveryMethod=email&skip=0&limit=5
+Authorization: Bearer staff-access-token-here
+
+### 2. GET NOTIFICATIONS - ERROR CASES
+
+### Get Notifications without Authentication
+GET http://localhost:3000/api/v1/notifications
+
+### Get Notifications with Visitor Token (Insufficient Permissions)
+GET http://localhost:3000/api/v1/notifications
+Authorization: Bearer visitor-access-token-here
+
+### Get Notifications with Invalid Type
+GET http://localhost:3000/api/v1/notifications?type=invalid-type
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Invalid Status
+GET http://localhost:3000/api/v1/notifications?status=invalid-status
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Invalid Delivery Method
+GET http://localhost:3000/api/v1/notifications?deliveryMethod=invalid-method
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Invalid Date Format
+GET http://localhost:3000/api/v1/notifications?dateFrom=invalid-date
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Invalid Skip (Negative)
+GET http://localhost:3000/api/v1/notifications?skip=-1
+Authorization: Bearer staff-access-token-here
+
+### Get Notifications with Invalid Limit (Too High)
+GET http://localhost:3000/api/v1/notifications?limit=101
+Authorization: Bearer staff-access-token-here
+
+### 3. CREATE NOTIFICATION - SUCCESS CASES
+
+### Create Booking Confirmation Notification
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "booking_confirmation",
+  "title": "Booking Confirmation",
+  "message": "Your booking has been confirmed for tomorrow at 2:00 PM",
+  "recipient": "visitor@example.com",
+  "scheduledFor": "2024-01-15T10:00:00Z",
+  "deliveryMethod": "email",
+  "templateId": "valid-template-id",
+  "metadata": {
+    "bookingId": "valid-booking-id",
+    "slotId": "valid-slot-id"
+  }
+}
+
+### Create Booking Reminder Notification
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "booking_reminder",
+  "title": "Booking Reminder",
+  "message": "Don't forget your visit tomorrow at 2:00 PM",
+  "recipient": "+1234567890",
+  "scheduledFor": "2024-01-15T08:00:00Z",
+  "deliveryMethod": "sms",
+  "metadata": {
+    "bookingId": "valid-booking-id"
+  }
+}
+
+### Create General Announcement
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Museum Closure Notice",
+  "message": "The museum will be closed on January 20th for maintenance",
+  "recipient": "all_visitors",
+  "deliveryMethod": "all",
+  "metadata": {
+    "announcementType": "closure"
+  }
+}
+
+### Create Maintenance Alert
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "maintenance_alert",
+  "title": "Maintenance Alert",
+  "message": "Scheduled maintenance will begin at 6:00 PM today",
+  "recipient": "staff@museum.com",
+  "deliveryMethod": "in_app",
+  "metadata": {
+    "maintenanceType": "scheduled"
+  }
+}
+
+### Create Notification with Minimal Data
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### 4. CREATE NOTIFICATION - ERROR CASES
+
+### Create Notification without Authentication
+POST http://localhost:3000/api/v1/notifications
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Visitor Token (Insufficient Permissions)
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Invalid Type
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "invalid_type",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Empty Title
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Title Too Long
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "This is a very long title that exceeds the maximum allowed length for a notification title field in the database and should cause a validation error",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Empty Message
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Message Too Long
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a very long message that exceeds the maximum allowed length for a notification message field in the database and should cause a validation error. This message is intentionally made very long to test the validation limits and ensure that the system properly handles messages that are too long for the database field constraints.",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Empty Recipient
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Recipient Too Long
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "This is a very long recipient field that exceeds the maximum allowed length for a notification recipient field in the database and should cause a validation error",
+  "deliveryMethod": "email"
+}
+
+### Create Notification with Invalid Delivery Method
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "invalid_method"
+}
+
+### Create Notification with Past Scheduled Date
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email",
+  "scheduledFor": "2020-01-01T10:00:00Z"
+}
+
+### Create Notification with Invalid Template ID
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email",
+  "templateId": "invalid-template-id"
+}
+
+### Create Notification with Invalid Metadata
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email",
+  "metadata": "invalid-metadata"
+}
+
+### Create Notification with Missing Required Fields
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "title": "Test Notification"
+}
+
+### 5. SEND NOTIFICATION - SUCCESS CASES
+
+### Send Notification
+PUT http://localhost:3000/api/v1/notifications/valid-notification-id/send
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 6. SEND NOTIFICATION - ERROR CASES
+
+### Send Notification without Authentication
+PUT http://localhost:3000/api/v1/notifications/valid-notification-id/send
+Content-Type: application/json
+
+{}
+
+### Send Notification with Invalid ID
+PUT http://localhost:3000/api/v1/notifications/invalid-notification-id/send
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### Send Notification with Visitor Token (Insufficient Permissions)
+PUT http://localhost:3000/api/v1/notifications/valid-notification-id/send
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{}
+
+### Send Already Sent Notification
+PUT http://localhost:3000/api/v1/notifications/already-sent-notification-id/send
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 7. CREATE NOTIFICATION TEMPLATE - SUCCESS CASES
+
+### Create Booking Confirmation Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Booking Confirmation Template",
+  "type": "booking_confirmation",
+  "subject": "Booking Confirmed - VisitEase Museum",
+  "bodyTemplate": "Dear [VISITOR_NAME], your booking for [VISIT_DATE] at [VISIT_TIME] has been confirmed. Booking ID: [BOOKING_ID]",
+  "variables": ["VISITOR_NAME", "VISIT_DATE", "VISIT_TIME", "BOOKING_ID"]
+}
+
+### Create Booking Reminder Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Booking Reminder Template",
+  "type": "booking_reminder",
+  "subject": "Reminder: Your Visit Tomorrow",
+  "bodyTemplate": "Hi [VISITOR_NAME], this is a reminder that you have a visit scheduled for tomorrow at [VISIT_TIME]. Please arrive 15 minutes early.",
+  "variables": ["VISITOR_NAME", "VISIT_TIME"]
+}
+
+### Create General Announcement Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "General Announcement Template",
+  "type": "general_announcement",
+  "subject": "Museum Announcement",
+  "bodyTemplate": "Important museum announcement: [ANNOUNCEMENT_MESSAGE]",
+  "variables": ["ANNOUNCEMENT_MESSAGE"]
+}
+
+### 8. CREATE NOTIFICATION TEMPLATE - ERROR CASES
+
+### Create Template without Authentication
+POST http://localhost:3000/api/v1/notifications/templates
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": []
+}
+
+### Create Template with Visitor Token (Insufficient Permissions)
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": []
+}
+
+### Create Template with Empty Name
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": []
+}
+
+### Create Template with Name Too Long
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "This is a very long template name that exceeds the maximum allowed length for a template name field in the database and should cause a validation error",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": []
+}
+
+### Create Template with Invalid Type
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "invalid_type",
+  "bodyTemplate": "Test template",
+  "variables": []
+}
+
+### Create Template with Empty Body Template
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "",
+  "variables": []
+}
+
+### Create Template with Body Template Too Long
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "This is a very long body template that exceeds the maximum allowed length for a template body field in the database and should cause a validation error. This template is intentionally made very long to test the validation limits and ensure that the system properly handles templates that are too long for the database field constraints.",
+  "variables": []
+}
+
+### Create Template with Invalid Variables (Not Array)
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": "invalid-variables"
+}
+
+### Create Template with Invalid Variables (Non-String Elements)
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": ["validVariable", 123, "anotherValidVariable"]
+}
+
+### Create Template with Empty Variable Names
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": ["validVariable", "", "anotherValidVariable"]
+}
+
+### Create Template with Variable Names Too Long
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template",
+  "type": "general_announcement",
+  "bodyTemplate": "Test template",
+  "variables": ["validVariable", "ThisIsAVeryLongVariableNameThatExceedsTheMaximumAllowedLengthForAVariableNameFieldInTheDatabaseAndShouldCauseAValidationError", "anotherValidVariable"]
+}
+
+### Create Template with Missing Required Fields
+POST http://localhost:3000/api/v1/notifications/templates
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Test Template"
+}
+
+### 9. UPDATE NOTIFICATION TEMPLATE - SUCCESS CASES
+
+### Update Notification Template
+PUT http://localhost:3000/api/v1/notifications/templates/valid-template-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Updated Template Name",
+  "subject": "Updated Subject",
+  "bodyTemplate": "Updated body template with [TEST_VARIABLE]",
+  "variables": ["TEST_VARIABLE"]
+}
+
+### 10. UPDATE NOTIFICATION TEMPLATE - ERROR CASES
+
+### Update Template without Authentication
+PUT http://localhost:3000/api/v1/notifications/templates/valid-template-id
+Content-Type: application/json
+
+{
+  "name": "Updated Template Name"
+}
+
+### Update Template with Invalid ID
+PUT http://localhost:3000/api/v1/notifications/templates/invalid-template-id
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Updated Template Name"
+}
+
+### Update Template with Visitor Token (Insufficient Permissions)
+PUT http://localhost:3000/api/v1/notifications/templates/valid-template-id
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{
+  "name": "Updated Template Name"
+}
+
+### 11. DELETE NOTIFICATION TEMPLATE - SUCCESS CASES
+
+### Delete Notification Template
+DELETE http://localhost:3000/api/v1/notifications/templates/valid-template-id
+Authorization: Bearer staff-access-token-here
+
+### 12. DELETE NOTIFICATION TEMPLATE - ERROR CASES
+
+### Delete Template without Authentication
+DELETE http://localhost:3000/api/v1/notifications/templates/valid-template-id
+
+### Delete Template with Invalid ID
+DELETE http://localhost:3000/api/v1/notifications/templates/invalid-template-id
+Authorization: Bearer staff-access-token-here
+
+### Delete Template with Visitor Token (Insufficient Permissions)
+DELETE http://localhost:3000/api/v1/notifications/templates/valid-template-id
+Authorization: Bearer visitor-access-token-here
+
+### 13. RATE LIMITING TESTS
+
+### Test Rate Limiting - Multiple Create Requests
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Rate Limit Test 1",
+  "message": "This is a rate limit test notification",
+  "recipient": "test1@example.com",
+  "deliveryMethod": "email"
+}
+
+###
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Rate Limit Test 2",
+  "message": "This is a rate limit test notification",
+  "recipient": "test2@example.com",
+  "deliveryMethod": "email"
+}
+
+###
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Rate Limit Test 3",
+  "message": "This is a rate limit test notification",
+  "recipient": "test3@example.com",
+  "deliveryMethod": "email"
+}
+
+###
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Rate Limit Test 4",
+  "message": "This is a rate limit test notification",
+  "recipient": "test4@example.com",
+  "deliveryMethod": "email"
+}
+
+###
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{
+  "type": "general_announcement",
+  "title": "Rate Limit Test 5",
+  "message": "This is a rate limit test notification",
+  "recipient": "test5@example.com",
+  "deliveryMethod": "email"
+}
+
+### 14. CONTENT TYPE VALIDATION TESTS
+
+### Test with Invalid Content Type
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+Content-Type: text/plain
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}
+
+### Test with Missing Content Type
+POST http://localhost:3000/api/v1/notifications
+Authorization: Bearer staff-access-token-here
+
+{
+  "type": "general_announcement",
+  "title": "Test Notification",
+  "message": "This is a test notification",
+  "recipient": "test@example.com",
+  "deliveryMethod": "email"
+}

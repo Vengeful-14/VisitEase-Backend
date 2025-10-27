@@ -1,0 +1,284 @@
+### ============================================
+### AUTHENTICATION API TESTS
+### ============================================
+
+### 1. USER REGISTRATION - SUCCESS CASES
+
+### Register Admin User
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "name": "John Admin",
+  "password": "Password123",
+  "phone": "+1234567890",
+  "role": "admin"
+}
+
+### Register Staff User
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "staff@visitease.com",
+  "name": "Sarah Staff",
+  "password": "Password123",
+  "phone": "+1234567891",
+  "role": "staff"
+}
+
+### Register Visitor User
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "visitor@visitease.com",
+  "name": "Mike Visitor",
+  "password": "Password123",
+  "phone": "+1234567892",
+  "role": "visitor"
+}
+
+### Register with Minimal Data
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "minimal@example.com",
+  "name": "Minimal User",
+  "password": "Password123"
+}
+
+### 2. USER REGISTRATION - ERROR CASES
+
+### Register with Invalid Email
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "name": "Test User",
+  "password": "Password123"
+}
+
+### Register with Short Name
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "name": "A",
+  "password": "Password123"
+}
+
+### Register with Weak Password
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "name": "Test User",
+  "password": "123"
+}
+
+### Register with Invalid Role
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "name": "Test User",
+  "password": "Password123",
+  "role": "invalid_role"
+}
+
+### Register with Missing Required Fields
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### 3. USER LOGIN - SUCCESS CASES
+
+### Login Admin User
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "password": "Password123"
+}
+
+### Login Staff User
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@visitease.com",
+  "password": "Password123"
+}
+
+### Login Visitor User
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "visitor@visitease.com",
+  "password": "Password123"
+}
+
+### 4. USER LOGIN - ERROR CASES
+
+### Login with Invalid Email
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "invalid@example.com",
+  "password": "Password123"
+}
+
+### Login with Wrong Password
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "password": "WrongPassword"
+}
+
+### Login with Missing Password
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com"
+}
+
+### Login with Invalid Email Format
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "not-an-email",
+  "password": "Password123"
+}
+
+### 5. PASSWORD RESET - SUCCESS CASES
+
+### Request Password Reset
+POST http://localhost:3000/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com"
+}
+
+### Reset Password with Valid Token
+POST http://localhost:3000/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "valid-reset-token-here",
+  "password": "NewPassword123"
+}
+
+### 6. PASSWORD RESET - ERROR CASES
+
+### Request Password Reset with Invalid Email
+POST http://localhost:3000/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "nonexistent@example.com"
+}
+
+### Reset Password with Invalid Token
+POST http://localhost:3000/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "invalid-token",
+  "password": "NewPassword123"
+}
+
+### Reset Password with Weak Password
+POST http://localhost:3000/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "valid-reset-token-here",
+  "password": "123"
+}
+
+### 7. TOKEN REFRESH - SUCCESS CASES
+
+### Refresh Access Token
+POST http://localhost:3000/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "valid-refresh-token-here"
+}
+
+### 8. TOKEN REFRESH - ERROR CASES
+
+### Refresh with Invalid Token
+POST http://localhost:3000/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "invalid-refresh-token"
+}
+
+### Refresh with Expired Token
+POST http://localhost:3000/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "expired-refresh-token"
+}
+
+### 9. LOGOUT - SUCCESS CASES
+
+### Logout User
+POST http://localhost:3000/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer valid-access-token-here
+
+{
+  "sessionToken": "valid-session-token-here"
+}
+
+### 10. LOGOUT - ERROR CASES
+
+### Logout without Token
+POST http://localhost:3000/api/v1/auth/logout
+Content-Type: application/json
+
+### Logout with Invalid Token
+POST http://localhost:3000/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer invalid-token
+
+### 11. GET USER PROFILE - SUCCESS CASES
+
+### Get User Profile
+GET http://localhost:3000/api/v1/user/profile/valid-user-id
+Authorization: Bearer valid-access-token-here
+
+### 12. GET USER PROFILE - ERROR CASES
+
+### Get Profile without Authentication
+GET http://localhost:3000/api/v1/user/profile/valid-user-id
+
+### Get Profile with Invalid Token
+GET http://localhost:3000/api/v1/user/profile/valid-user-id
+Authorization: Bearer invalid-token
+
+### Get Profile with Invalid User ID
+GET http://localhost:3000/api/v1/user/profile/invalid-user-id
+Authorization: Bearer valid-access-token-here

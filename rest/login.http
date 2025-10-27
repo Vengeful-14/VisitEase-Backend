@@ -1,0 +1,63 @@
+### Login Admin User
+# @name login
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "password": "Password123"
+}
+
+
+### logout Admin User (with session token)
+POST http://localhost:3000/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.data.accessToken}}
+{
+  "sessionToken": "{{login.response.body.$.data.sessionToken}}"
+}
+
+### logout Admin User (without session token - simplified)
+POST http://localhost:3000/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.data.accessToken}}
+
+### Login with Staff User
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@visitease.com",
+  "password": "Password123"
+}
+
+### Login with Visitor User
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "visitor@visitease.com",
+  "password": "Password123"
+}
+
+### Login with Invalid Credentials
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "invalid@example.com",
+  "password": "wrongpassword"
+}
+
+### Refresh Token
+POST http://localhost:3000/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "your-refresh-token-here"
+}
+
+### Logout (simplified - no session token required)
+POST http://localhost:3000/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer eysJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI3Y2FlZjk4Ny04NDBjLTRhYWEtODc0MC1iZDQxMTQ3YjRiNzkiLCJlbWFpbCI6ImFkbWluQHZpc2l0ZWFzZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjA4ODU5NjMsImV4cCI6MTc2MDg4Njg2MywiYXVkIjoidmlzaXRlYXNlLWNsaWVudCIsImlzcyI6InZpc2l0ZWFzZS1hcGkifQ.K_F7-1J7AEfjROCIOD4icW-YLWPvRjPIQEZ6RXn8xUE

@@ -1,0 +1,111 @@
+### ============================================
+### SYSTEM LOG TESTING
+### Test SystemLog functionality by creating slots and bookings
+### ============================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+### Acquire tokens first using rest/login.http
+@adminToken = {{login.response.body.$.data.token}}
+@staffToken = {{login.response.body.$.data.token}}
+
+### --------------------------------------------
+### 1) CREATE SLOT (This will log to SystemLog)
+### --------------------------------------------
+
+### Create a visit slot - this should create a SystemLog entry
+# @name createSlotWithLogging
+POST {{baseUrl}}/schedule/slots
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "date": "2025-12-15",
+  "startTime": "10:00:00",
+  "endTime": "11:00:00",
+  "durationMinutes": 60,
+  "capacity": 25,
+  "status": "available",
+  "description": "Morning tour slot - SystemLog test"
+}
+
+### --------------------------------------------
+### 2) UPDATE SLOT (This will log to SystemLog)
+### --------------------------------------------
+
+### Update the slot - this should create a SystemLog entry
+PUT {{baseUrl}}/schedule/slots/{{createSlotWithLogging.response.body.$.data.id}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "capacity": 30,
+  "description": "Updated morning tour slot - SystemLog test"
+}
+
+### --------------------------------------------
+### 3) CREATE BOOKING (This will log to SystemLog)
+### --------------------------------------------
+
+### First, create a visitor
+# @name createVisitor
+POST {{baseUrl}}/visitor/register
+Content-Type: application/json
+
+{
+  "name": "John Smith",
+  "email": "john.smith@example.com",
+  "phone": "+1234567890",
+  "visitorType": "individual",
+  "ageGroup": "adult_18_34"
+}
+
+### Create a booking - this should create a SystemLog entry
+# @name createBookingWithLogging
+POST {{baseUrl}}/visitor-slot/book
+Content-Type: application/json
+
+{
+  "visitorId": "{{createVisitor.response.body.$.data.id}}",
+  "slotId": "{{createSlotWithLogging.response.body.$.data.id}}",
+  "groupSize": 2,
+  "totalAmount": 20.00,
+  "paymentMethod": "credit_card",
+  "specialRequests": "Wheelchair accessible tour"
+}
+
+### --------------------------------------------
+### 4) CANCEL BOOKING (This will log to SystemLog)
+### --------------------------------------------
+
+### Cancel the booking - this should create a SystemLog entry
+PATCH {{baseUrl}}/visitor-slot/{{createBookingWithLogging.response.body.$.data.id}}/cancel
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "reason": "Visitor requested cancellation"
+}
+
+### --------------------------------------------
+### 5) DELETE SLOT (This will log to SystemLog)
+### --------------------------------------------
+
+### Delete the slot - this should create a SystemLog entry
+DELETE {{baseUrl}}/schedule/slots/{{createSlotWithLogging.response.body.$.data.id}}
+Authorization: Bearer {{staffToken}}
+
+### --------------------------------------------
+### 6) CHECK SYSTEM LOGS (Manual Database Query)
+### --------------------------------------------
+
+### Note: To view the SystemLog entries, you would need to:
+### 1. Connect to your PostgreSQL database
+### 2. Run: SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 10;
+### 
+### Expected SystemLog entries:
+### - "Visit slot created for 2025-12-15 at 10:00:00-11:00:00 (Capacity: 25) - Morning tour slot - SystemLog test"
+### - "Visit slot updated for 2025-12-15 at 10:00:00-11:00:00 (Capacity: 30) - Updated morning tour slot - SystemLog test"
+### - "New booking created for John Smith on 2025-12-15 at 10:00:00 (Group size: 2)"
+### - "Booking cancelled for John Smith on 2025-12-15 at 10:00:00 - Reason: Visitor requested cancellation"
+### - "Visit slot deleted for 2025-12-15 at 10:00:00-11:00:00"

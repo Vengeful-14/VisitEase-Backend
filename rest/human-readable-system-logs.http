@@ -1,0 +1,271 @@
+### Human-Readable System Logs Test
+### This file demonstrates the new human-readable system log format
+
+### 1. Create a visit slot (will generate a log)
+POST http://localhost:3000/api/v1/visit-slots
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "date": "2024-01-15",
+  "startTime": "09:00:00",
+  "endTime": "10:00:00",
+  "capacity": 10,
+  "description": "Morning visit slot for general visitors"
+}
+
+### 2. Update the visit slot (will generate a log)
+PUT http://localhost:3000/api/v1/visit-slots/SLOT_ID
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "capacity": 15,
+  "description": "Updated morning visit slot with increased capacity"
+}
+
+### 3. Create a booking (will generate a log)
+POST http://localhost:3000/api/v1/bookings
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "visitorId": "VISITOR_ID",
+  "slotId": "SLOT_ID",
+  "groupSize": 3,
+  "notes": "Family visit"
+}
+
+### 4. Cancel a booking (will generate a log)
+PATCH http://localhost:3000/api/v1/bookings/BOOKING_ID/cancel
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "reason": "Change of plans"
+}
+
+### 5. Delete a visit slot (will generate a log)
+DELETE http://localhost:3000/api/v1/visit-slots/SLOT_ID
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 6. Get all system logs with human-readable format
+GET http://localhost:3000/api/v1/system-logs?limit=10&sortBy=createdAt&sortOrder=desc
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 7. Get system logs filtered by action type
+GET http://localhost:3000/api/v1/system-logs?action=slot_created&limit=5
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 8. Get system logs filtered by level
+GET http://localhost:3000/api/v1/system-logs?level=info&limit=5
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 9. Get system logs with date range
+GET http://localhost:3000/api/v1/system-logs?startDate=2024-01-01&endDate=2024-01-31&limit=20
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 10. Get system log statistics
+GET http://localhost:3000/api/v1/system-logs/stats/overview
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 11. Get a specific system log by ID
+GET http://localhost:3000/api/v1/system-logs/LOG_ID
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 12. Clean up old logs (delete logs older than 30 days)
+DELETE http://localhost:3000/api/v1/system-logs/cleanup?olderThanDays=30
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### Example of what the new human-readable logs look like:
+
+### Sample Log Entry for Slot Creation:
+# {
+#   "id": "log-123",
+#   "level": "info",
+#   "message": "📅 NEW VISIT SLOT CREATED: Monday, January 15, 2024 from 09:00:00 to 10:00:00 with capacity of 10 visitors - Description: \"Morning visit slot for general visitors\"",
+#   "context": {
+#     "action": "slot_created",
+#     "actionType": "Visit Slot Creation",
+#     "slotId": "slot-456",
+#     "date": "2024-01-15",
+#     "readableDate": "Monday, January 15, 2024",
+#     "startTime": "09:00:00",
+#     "endTime": "10:00:00",
+#     "capacity": 10,
+#     "description": "Morning visit slot for general visitors",
+#     "createdBy": "admin@example.com",
+#     "timestamp": "2024-01-15T09:00:00.000Z",
+#     "details": {
+#       "slotInfo": "Slot ID: slot-456",
+#       "timeInfo": "Time: 09:00:00 - 10:00:00",
+#       "capacityInfo": "Capacity: 10 visitors",
+#       "dateInfo": "Date: Monday, January 15, 2024"
+#     }
+#   },
+#   "userId": "user-789",
+#   "createdAt": "2024-01-15T09:00:00.000Z"
+# }
+
+### Sample Log Entry for Booking Creation:
+# {
+#   "id": "log-124",
+#   "level": "info",
+#   "message": "🎫 NEW BOOKING CREATED: John Smith has booked a visit for Monday, January 15, 2024 at 09:00:00 (group of 3 visitors)",
+#   "context": {
+#     "action": "booking_created",
+#     "actionType": "Booking Creation",
+#     "bookingId": "booking-789",
+#     "visitorName": "John Smith",
+#     "slotDate": "2024-01-15",
+#     "readableDate": "Monday, January 15, 2024",
+#     "slotTime": "09:00:00",
+#     "groupSize": 3,
+#     "createdBy": "admin@example.com",
+#     "timestamp": "2024-01-15T09:05:00.000Z",
+#     "details": {
+#       "bookingInfo": "Booking ID: booking-789",
+#       "visitorInfo": "Visitor: John Smith",
+#       "timeInfo": "Time: 09:00:00",
+#       "dateInfo": "Date: Monday, January 15, 2024",
+#       "groupInfo": "Group size: 3 people"
+#     }
+#   },
+#   "userId": "user-789",
+#   "createdAt": "2024-01-15T09:05:00.000Z"
+# }
+
+### Sample Log Entry for Booking Cancellation:
+# {
+#   "id": "log-125",
+#   "level": "warn",
+#   "message": "❌ BOOKING CANCELLED: John Smith's visit for Monday, January 15, 2024 at 09:00:00 has been cancelled - Reason: \"Change of plans\"",
+#   "context": {
+#     "action": "booking_cancelled",
+#     "actionType": "Booking Cancellation",
+#     "bookingId": "booking-789",
+#     "visitorName": "John Smith",
+#     "slotDate": "2024-01-15",
+#     "readableDate": "Monday, January 15, 2024",
+#     "slotTime": "09:00:00",
+#     "reason": "Change of plans",
+#     "cancelledBy": "admin@example.com",
+#     "timestamp": "2024-01-15T09:10:00.000Z",
+#     "details": {
+#       "bookingInfo": "Booking ID: booking-789",
+#       "visitorInfo": "Visitor: John Smith",
+#       "timeInfo": "Time: 09:00:00",
+#       "dateInfo": "Date: Monday, January 15, 2024",
+#       "reasonInfo": "Reason: Change of plans",
+#       "impactInfo": "This booking has been cancelled and the slot may be available for other visitors"
+#     }
+#   },
+#   "userId": "user-789",
+#   "createdAt": "2024-01-15T09:10:00.000Z"
+# }
+
+### Sample Log Entry for Slot Deletion:
+# {
+#   "id": "log-126",
+#   "level": "warn",
+#   "message": "🗑️ VISIT SLOT DELETED: Monday, January 15, 2024 from 09:00:00 to 10:00:00 - This slot has been permanently removed from the system",
+#   "context": {
+#     "action": "slot_deleted",
+#     "actionType": "Visit Slot Deletion",
+#     "slotId": "slot-456",
+#     "date": "2024-01-15",
+#     "readableDate": "Monday, January 15, 2024",
+#     "startTime": "09:00:00",
+#     "endTime": "10:00:00",
+#     "deletedBy": "admin@example.com",
+#     "timestamp": "2024-01-15T09:15:00.000Z",
+#     "details": {
+#       "slotInfo": "Slot ID: slot-456",
+#       "timeInfo": "Time: 09:00:00 - 10:00:00",
+#       "dateInfo": "Date: Monday, January 15, 2024",
+#       "actionInfo": "This slot has been permanently removed from the system",
+#       "impactInfo": "Any existing bookings for this slot may be affected"
+#     }
+#   },
+#   "userId": "user-789",
+#   "createdAt": "2024-01-15T09:15:00.000Z"
+# }
+
+### Sample Log Entry for Maintenance Scheduling:
+# {
+#   "id": "log-127",
+#   "level": "info",
+#   "message": "🔧 MAINTENANCE SCHEDULED: System maintenance planned for Monday, January 15, 2024 from 02:00:00 to 04:00:00 - Details: \"Database maintenance and system updates\"",
+#   "context": {
+#     "action": "maintenance_scheduled",
+#     "actionType": "Maintenance Scheduling",
+#     "slotId": "maintenance-slot-123",
+#     "date": "2024-01-15",
+#     "readableDate": "Monday, January 15, 2024",
+#     "startTime": "02:00:00",
+#     "endTime": "04:00:00",
+#     "description": "Database maintenance and system updates",
+#     "scheduledBy": "admin@example.com",
+#     "timestamp": "2024-01-15T09:20:00.000Z",
+#     "details": {
+#       "slotInfo": "Slot ID: maintenance-slot-123",
+#       "timeInfo": "Time: 02:00:00 - 04:00:00",
+#       "dateInfo": "Date: Monday, January 15, 2024",
+#       "descriptionInfo": "Details: Database maintenance and system updates",
+#       "impactInfo": "This maintenance window may affect system availability"
+#     }
+#   },
+#   "userId": "user-789",
+#   "createdAt": "2024-01-15T09:20:00.000Z"
+# }
+
+### Sample Log Entry for Slot Status Change:
+# {
+#   "id": "log-128",
+#   "level": "info",
+#   "message": "🔄 SLOT STATUS CHANGED: Visit slot for Monday, January 15, 2024 at 09:00:00-10:00:00 status changed from available to full",
+#   "context": {
+#     "action": "slot_status_changed",
+#     "actionType": "Slot Status Change",
+#     "slotId": "slot-456",
+#     "date": "2024-01-15",
+#     "readableDate": "Monday, January 15, 2024",
+#     "startTime": "09:00:00",
+#     "endTime": "10:00:00",
+#     "oldStatus": "available",
+#     "newStatus": "full",
+#     "changedBy": "admin@example.com",
+#     "timestamp": "2024-01-15T09:25:00.000Z",
+#     "details": {
+#       "slotInfo": "Slot ID: slot-456",
+#       "timeInfo": "Time: 09:00:00 - 10:00:00",
+#       "dateInfo": "Date: Monday, January 15, 2024",
+#       "statusChangeInfo": "Status: AVAILABLE → FULL",
+#       "impactInfo": "This slot is now full and is at full capacity"
+#     }
+#   },
+#   "userId": "user-789",
+#   "createdAt": "2024-01-15T09:25:00.000Z"
+# }
+
+### Sample Log Entry for System Error:
+# {
+#   "id": "log-129",
+#   "level": "error",
+#   "message": "🚨 SYSTEM ERROR: Database connection failed during booking creation",
+#   "context": {
+#     "action": "error",
+#     "actionType": "System Error",
+#     "errorBy": "admin@example.com",
+#     "timestamp": "2024-01-15T09:30:00.000Z",
+#     "details": {
+#       "errorInfo": "Error: Database connection failed during booking creation",
+#       "userInfo": "User: admin@example.com",
+#       "contextInfo": "Additional context: {\"operation\":\"booking_creation\",\"visitorId\":\"visitor-123\"}",
+#       "impactInfo": "This error may affect system functionality"
+#     }
+#   },
+#   "userId": "user-789",
+#   "createdAt": "2024-01-15T09:30:00.000Z"
+# }
+

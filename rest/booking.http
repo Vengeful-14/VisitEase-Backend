@@ -1,0 +1,433 @@
+### ============================================
+### BOOKING API TESTS
+### ============================================
+
+### 1. CREATE BOOKING - SUCCESS CASES
+
+### Create Booking for Individual Visitor
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1,
+  "totalAmount": 25.00,
+  "paymentMethod": "credit_card",
+  "specialRequests": "Wheelchair accessible tour"
+}
+
+### Create Booking for Family
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 4,
+  "totalAmount": 100.00,
+  "paymentMethod": "cash",
+  "specialRequests": "Family with two children under 12"
+}
+
+### Create Booking for Educational Group
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 25,
+  "totalAmount": 500.00,
+  "paymentMethod": "online",
+  "specialRequests": "Educational tour for university students"
+}
+
+### Create Booking with Minimal Data
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+### 2. CREATE BOOKING - ERROR CASES
+
+### Create Booking without Authentication
+POST http://localhost:3000/api/v1/bookings
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+### Create Booking with Invalid Visitor ID
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "invalid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+### Create Booking with Invalid Slot ID
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "invalid-slot-id",
+  "groupSize": 1
+}
+
+### Create Booking with Invalid Group Size (Zero)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 0
+}
+
+### Create Booking with Invalid Group Size (Too Large)
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 51
+}
+
+### Create Booking with Invalid Payment Method
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1,
+  "paymentMethod": "invalid-payment-method"
+}
+
+### Create Booking with Negative Total Amount
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1,
+  "totalAmount": -10.00
+}
+
+### Create Booking with Missing Required Fields
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id"
+}
+
+### Create Booking for Fully Booked Slot
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "fully-booked-slot-id",
+  "groupSize": 1
+}
+
+### 3. CONFIRM BOOKING - SUCCESS CASES
+
+### Confirm Booking
+PUT http://localhost:3000/api/v1/bookings/valid-booking-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 4. CONFIRM BOOKING - ERROR CASES
+
+### Confirm Booking without Authentication
+PUT http://localhost:3000/api/v1/bookings/valid-booking-id/confirm
+Content-Type: application/json
+
+{}
+
+### Confirm Booking with Invalid ID
+PUT http://localhost:3000/api/v1/bookings/invalid-booking-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### Confirm Booking with Visitor Token (Insufficient Permissions)
+PUT http://localhost:3000/api/v1/bookings/valid-booking-id/confirm
+Authorization: Bearer visitor-access-token-here
+Content-Type: application/json
+
+{}
+
+### Confirm Already Confirmed Booking
+PUT http://localhost:3000/api/v1/bookings/already-confirmed-booking-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### Confirm Cancelled Booking
+PUT http://localhost:3000/api/v1/bookings/cancelled-booking-id/confirm
+Authorization: Bearer staff-access-token-here
+Content-Type: application/json
+
+{}
+
+### 5. CANCEL BOOKING - SUCCESS CASES
+
+### Cancel Booking with Reason
+PUT http://localhost:3000/api/v1/bookings/valid-booking-id/cancel
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "reason": "Change of plans"
+}
+
+### Cancel Booking without Reason
+PUT http://localhost:3000/api/v1/bookings/valid-booking-id/cancel
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{}
+
+### 6. CANCEL BOOKING - ERROR CASES
+
+### Cancel Booking without Authentication
+PUT http://localhost:3000/api/v1/bookings/valid-booking-id/cancel
+Content-Type: application/json
+
+{
+  "reason": "Change of plans"
+}
+
+### Cancel Booking with Invalid ID
+PUT http://localhost:3000/api/v1/bookings/invalid-booking-id/cancel
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "reason": "Change of plans"
+}
+
+### Cancel Already Cancelled Booking
+PUT http://localhost:3000/api/v1/bookings/already-cancelled-booking-id/cancel
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "reason": "Change of plans"
+}
+
+### Cancel Completed Booking
+PUT http://localhost:3000/api/v1/bookings/completed-booking-id/cancel
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "reason": "Change of plans"
+}
+
+### 7. GET BOOKING BY ID - SUCCESS CASES
+
+### Get Booking by Valid ID
+GET http://localhost:3000/api/v1/bookings/valid-booking-id
+Authorization: Bearer valid-access-token-here
+
+### 8. GET BOOKING BY ID - ERROR CASES
+
+### Get Booking without Authentication
+GET http://localhost:3000/api/v1/bookings/valid-booking-id
+
+### Get Booking with Invalid ID
+GET http://localhost:3000/api/v1/bookings/invalid-booking-id
+Authorization: Bearer valid-access-token-here
+
+### Get Non-existent Booking
+GET http://localhost:3000/api/v1/bookings/00000000-0000-0000-0000-000000000000
+Authorization: Bearer valid-access-token-here
+
+### 9. GET BOOKINGS BY VISITOR - SUCCESS CASES
+
+### Get Bookings by Visitor ID
+GET http://localhost:3000/api/v1/bookings/visitor/valid-visitor-id
+Authorization: Bearer valid-access-token-here
+
+### Get Bookings by Visitor ID with Filters
+GET http://localhost:3000/api/v1/bookings/visitor/valid-visitor-id?status=confirmed&skip=0&limit=10
+Authorization: Bearer valid-access-token-here
+
+### 10. GET BOOKINGS BY VISITOR - ERROR CASES
+
+### Get Bookings by Visitor without Authentication
+GET http://localhost:3000/api/v1/bookings/visitor/valid-visitor-id
+
+### Get Bookings by Invalid Visitor ID
+GET http://localhost:3000/api/v1/bookings/visitor/invalid-visitor-id
+Authorization: Bearer valid-access-token-here
+
+### 11. GET BOOKINGS BY SLOT - SUCCESS CASES
+
+### Get Bookings by Slot ID
+GET http://localhost:3000/api/v1/bookings/slot/valid-slot-id
+Authorization: Bearer valid-access-token-here
+
+### Get Bookings by Slot ID with Filters
+GET http://localhost:3000/api/v1/bookings/slot/valid-slot-id?status=tentative&skip=0&limit=10
+Authorization: Bearer valid-access-token-here
+
+### 12. GET BOOKINGS BY SLOT - ERROR CASES
+
+### Get Bookings by Slot without Authentication
+GET http://localhost:3000/api/v1/bookings/slot/valid-slot-id
+
+### Get Bookings by Invalid Slot ID
+GET http://localhost:3000/api/v1/bookings/slot/invalid-slot-id
+Authorization: Bearer valid-access-token-here
+
+### 13. GET ALL BOOKINGS - SUCCESS CASES
+
+### Get All Bookings
+GET http://localhost:3000/api/v1/bookings
+Authorization: Bearer staff-access-token-here
+
+### Get All Bookings with Filters
+GET http://localhost:3000/api/v1/bookings?status=confirmed&dateFrom=2024-01-01&dateTo=2024-12-31&skip=0&limit=20
+Authorization: Bearer staff-access-token-here
+
+### 14. GET ALL BOOKINGS - ERROR CASES
+
+### Get All Bookings without Authentication
+GET http://localhost:3000/api/v1/bookings
+
+### Get All Bookings with Visitor Token (Insufficient Permissions)
+GET http://localhost:3000/api/v1/bookings
+Authorization: Bearer visitor-access-token-here
+
+### Get All Bookings with Invalid Filters
+GET http://localhost:3000/api/v1/bookings?status=invalid-status&skip=-1&limit=101
+Authorization: Bearer staff-access-token-here
+
+### 15. BOOKING STATISTICS - SUCCESS CASES
+
+### Get Booking Statistics
+GET http://localhost:3000/api/v1/bookings/stats
+Authorization: Bearer staff-access-token-here
+
+### 16. BOOKING STATISTICS - ERROR CASES
+
+### Get Booking Statistics without Authentication
+GET http://localhost:3000/api/v1/bookings/stats
+
+### Get Booking Statistics with Visitor Token (Insufficient Permissions)
+GET http://localhost:3000/api/v1/bookings/stats
+Authorization: Bearer visitor-access-token-here
+
+### 17. RATE LIMITING TESTS
+
+### Test Rate Limiting - Multiple Create Requests
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+###
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+###
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+###
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+###
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: application/json
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+### 18. CONTENT TYPE VALIDATION TESTS
+
+### Test with Invalid Content Type
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+Content-Type: text/plain
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}
+
+### Test with Missing Content Type
+POST http://localhost:3000/api/v1/bookings
+Authorization: Bearer valid-access-token-here
+
+{
+  "visitorId": "valid-visitor-id",
+  "slotId": "valid-slot-id",
+  "groupSize": 1
+}

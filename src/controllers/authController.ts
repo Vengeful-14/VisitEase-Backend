@@ -1,0 +1,376 @@
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { 
+  findUserByEmail, 
+  findUserById,
+  updateLastLogin, 
+  createUserSession, 
+  findUserSession, 
+  deactivateUserSession,
+  createPasswordResetToken,
+  findPasswordResetToken,
+  markPasswordResetTokenAsUsed,
+  updateUserPassword
+} from '../queries/userQueries';
+import { generateTokenPair } from '../auth';
+import { 
+  LoginRequest, 
+  LoginResponse, 
+  ApiResponse, 
+  ApiErrorResponse, 
+  ApiSuccessResponse 
+} from '../type';
+
+// User login controller
+export const loginUser = async (
+  req: Request<{}, ApiResponse, LoginRequest>, 
+  res: Response<ApiResponse>
+): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user by email
+    const user = await findUserByEmail(email);
+    if (!user) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Invalid email or password',
+      };
+      res.status(401).json(errorResponse);
+      return;
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Account is deactivated. Please contact support.',
+      };
+      res.status(401).json(errorResponse);
+      return;
+    }
+
+    // Check if user has a password (not OAuth user)
+    if (!user.passwordHash) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Please use social login for this account',
+      };
+      res.status(401).json(errorResponse);
+      return;
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Invalid email or password',
+      };
+      res.status(401).json(errorResponse);
+      return;
+    }
+
+    // Generate JWT tokens
+    const tokenPair = generateTokenPair({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    // Create session token for additional security
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const sessionExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Create user session
+    await createUserSession({
+      userId: user.id,
+      sessionToken,
+      expiresAt: sessionExpiresAt,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent'),
+    });
+
+    // Update last login time
+    await updateLastLogin(user.id);
+
+    // Prepare user data for response (without sensitive information)
+    const userData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl || undefined,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      phone: user.phone || undefined,
+      isActive: user.isActive,
+    };
+
+    // Prepare login response
+    const loginResponse: LoginResponse = {
+      user: userData,
+      token: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      sessionToken,
+      sessionExpiresAt: sessionExpiresAt.toISOString(),
+    };
+
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'Login successful',
+      data: loginResponse,
+    };
+
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Login error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Internal server error during login',
+    };
+    res.status(500).json(errorResponse);
+  }
+};
+
+// Refresh token controller
+export const refreshToken = async (
+  req: Request<{}, ApiResponse, { refreshToken: string }>, 
+  res: Response<ApiResponse>
+): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Refresh token is required',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    // Verify refresh token
+    const { verifyRefreshToken } = await import('../auth');
+    const { userId } = verifyRefreshToken(refreshToken);
+
+    // Find user to get current role and email
+    const user = await findUserById(userId);
+    if (!user || !user.isActive) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Invalid refresh token',
+      };
+      res.status(401).json(errorResponse);
+      return;
+    }
+
+    // Generate new token pair
+    const tokenPair = generateTokenPair({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        expiresIn: tokenPair.expiresIn,
+        tokenType: tokenPair.tokenType,
+      },
+    };
+
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Invalid or expired refresh token',
+    };
+    res.status(401).json(errorResponse);
+  }
+};
+
+// Logout controller - simplified without session token requirement
+export const logoutUser = async (
+  req: Request, 
+  res: Response<ApiResponse>
+): Promise<void> => {
+  try {
+    // Extract session token from request headers or body (optional)
+    const sessionToken = req.headers['x-session-token'] as string || req.body?.sessionToken;
+    
+    // If session token is provided, try to deactivate it (but don't fail if it doesn't exist)
+    if (sessionToken) {
+      try {
+        await deactivateUserSession(sessionToken);
+      } catch (sessionError) {
+        // Log the error but don't fail the logout
+        console.warn('Session deactivation failed (session may not exist):', sessionError);
+      }
+    }
+
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'Logout successful. Please remove the token from client storage.',
+    };
+
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Logout error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Internal server error during logout',
+    };
+    res.status(500).json(errorResponse);
+  }
+};
+
+// Request password reset controller
+export const requestPasswordReset = async (
+  req: Request<{}, ApiResponse, { email: string }>, 
+  res: Response<ApiResponse>
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Email is required',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    // Find user by email
+    const user = await findUserByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'If the email exists, a password reset link has been sent.',
+      };
+      res.status(200).json(successResponse);
+      return;
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Create password reset token
+    await createPasswordResetToken({
+      userId: user.id,
+      token: resetToken,
+      expiresAt,
+    });
+
+    // TODO: Send email with reset link
+    // For now, we'll just return success
+    // In production, you would send an email with the reset link
+
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'If the email exists, a password reset link has been sent.',
+      data: {
+        // Only include token in development
+        ...(process.env.NODE_ENV === 'development' && { resetToken }),
+      },
+    };
+
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Internal server error during password reset request',
+    };
+    res.status(500).json(errorResponse);
+  }
+};
+
+// Reset password controller
+export const resetPassword = async (
+  req: Request<{}, ApiResponse, { token: string; newPassword: string }>, 
+  res: Response<ApiResponse>
+): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Token and new password are required',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Password must be at least 6 characters long',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    // Find password reset token
+    const resetTokenRecord = await findPasswordResetToken(token);
+    if (!resetTokenRecord) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Invalid or expired reset token',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    // Check if token is expired
+    if (resetTokenRecord.expiresAt < new Date()) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Reset token has expired',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    // Check if token has already been used
+    if (resetTokenRecord.usedAt) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Reset token has already been used',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Update user password
+    await updateUserPassword(resetTokenRecord.userId, passwordHash);
+
+    // Mark token as used
+    await markPasswordResetTokenAsUsed(token);
+
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'Password has been reset successfully',
+    };
+
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Password reset error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Internal server error during password reset',
+    };
+    res.status(500).json(errorResponse);
+  }
+};

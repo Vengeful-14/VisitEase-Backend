@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+      "target": "es2020",                /* Specify what version of JavaScript to compile to */
+      "module": "commonjs",             /* Specify module code generation (Node.js uses CommonJS) */
+      "outDir": "./dist",               /* Where to put the compiled JavaScript files */
+      "rootDir": "./src",               /* Where your TypeScript source code is */
+      "esModuleInterop": true,          /* Enables better compatibility between CommonJS and ES Modules */
+      "allowSyntheticDefaultImports": true, /* Allow default imports from modules with no default export */
+      "skipLibCheck": true,             /* Skip type checking of declaration files */
+      "forceConsistentCasingInFileNames": true, /* Ensure consistent casing in file names */
+      "resolveJsonModule": true,        /* Allow importing JSON files */
+      "strict": true,                   /* Enable all strict type-checking options */
+      "declaration": true,              /* Generate declaration files */
+      "declarationMap": true,           /* Generate declaration map files */
+      "sourceMap": true                 /* Generate source map files */
+    },
+    "include": [
+      "src/**/*"
+    ],
+    "exclude": [
+      "node_modules",
+      "dist",
+      "**/*.test.ts",
+      "**/*.spec.ts"
+    ]
+  }
