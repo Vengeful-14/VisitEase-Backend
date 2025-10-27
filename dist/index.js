@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 // Import Express
 const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const visitorRoutes_1 = __importDefault(require("./routes/visitorRoutes"));
@@ -15,10 +16,31 @@ const bookingRoutes_1 = __importDefault(require("./routes/bookingRoutes"));
 const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
 const scheduleRoutes_1 = __importDefault(require("./routes/scheduleRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
+const systemLogRoutes_1 = __importDefault(require("./routes/systemLogRoutes"));
 // Create an Express application
 const app = (0, express_1.default)();
 const port = 3000;
+// CORS configuration
+const corsOptions = {
+    origin: [
+        'http://localhost:3000', // React default port
+        'http://localhost:3001', // Alternative React port
+        'http://localhost:5173', // Vite default port
+        'http://localhost:8080', // Alternative frontend port
+        'http://127.0.0.1:3000', // Alternative localhost
+        'http://127.0.0.1:3001',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:8080',
+        // Add your production frontend URL here when deploying
+        // 'https://your-frontend-domain.com'
+    ],
+    credentials: true, // Allow cookies and authorization headers
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 200 // For legacy browser support
+};
 // Middleware
+app.use((0, cors_1.default)(corsOptions)); // Enable CORS
 app.use(express_1.default.json()); // Parse JSON bodies
 app.use(express_1.default.urlencoded({ extended: true })); // Parse URL-encoded bodies
 // API Routes
@@ -30,6 +52,7 @@ app.use('/api/v1/booking', bookingRoutes_1.default);
 app.use('/api/v1/dashboard', dashboardRoutes_1.default);
 app.use('/api/v1/schedule', scheduleRoutes_1.default);
 app.use('/api/v1/notifications', notificationRoutes_1.default);
+app.use('/api/v1/system-logs', systemLogRoutes_1.default);
 // Define a route handler for the default home page
 app.get('/', (req, res) => {
     res.json({
@@ -96,6 +119,12 @@ app.get('/', (req, res) => {
                 delete: 'DELETE /api/v1/notifications/:id',
                 templates: 'GET /api/v1/notifications/templates',
                 createTemplate: 'POST /api/v1/notifications/templates'
+            },
+            systemLogs: {
+                getAll: 'GET /api/v1/system-logs',
+                get: 'GET /api/v1/system-logs/:id',
+                stats: 'GET /api/v1/system-logs/stats/overview',
+                cleanup: 'DELETE /api/v1/system-logs/cleanup'
             }
         }
     });

@@ -14,8 +14,8 @@ export interface UpcomingVisit {
     slot: {
         id: string;
         date: string;
-        startTime: Date;
-        endTime: Date;
+        startTime: string;
+        endTime: string;
         status: string;
         bookedCount: number;
         capacity: number;

@@ -5,6 +5,7 @@ export * from './bookingValidator';
 export * from './dashboardValidator';
 export * from './scheduleValidator';
 export * from './notificationValidator';
+export * from './systemLogValidator';
 export * from './commonValidator';
 export * from './validationMiddleware';
 export * from './middleware';

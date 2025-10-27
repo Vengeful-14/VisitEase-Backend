@@ -17,6 +17,7 @@ export interface Booking {
 }
 export declare class BookingService {
     private prisma;
+    private systemLogService;
     constructor();
     createBooking(bookingData: {
         slotId: string;

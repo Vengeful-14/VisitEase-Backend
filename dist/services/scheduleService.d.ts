@@ -1,9 +1,9 @@
 export interface VisitSlot {
     id: string;
     date: string;
-    startTime: Date;
-    endTime: Date;
-    duration: number;
+    startTime: string;
+    endTime: string;
+    durationMinutes: number;
     capacity: number;
     bookedCount: number;
     status: string;
@@ -31,6 +31,7 @@ export interface ScheduleIssue {
 }
 export declare class ScheduleService {
     private prisma;
+    private systemLogService;
     constructor();
     getSlots(filters: {
         dateRange?: string;
@@ -42,8 +43,10 @@ export declare class ScheduleService {
         slots: VisitSlot[];
         total: number;
     }>;
-    createSlot(slotData: Omit<VisitSlot, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<VisitSlot>;
-    updateSlot(id: string, updates: Partial<VisitSlot>, userId: string): Promise<VisitSlot>;
+    createSlot(slotData: any, userId: string): Promise<VisitSlot>;
+    updateSlot(id: string, updates: Partial<VisitSlot> & {
+        date?: Date | string;
+    }, userId: string): Promise<VisitSlot>;
     deleteSlot(id: string, userId: string): Promise<void>;
     getScheduleStats(): Promise<ScheduleStats>;
     getScheduleIssues(): Promise<ScheduleIssue[]>;
@@ -52,5 +55,7 @@ export declare class ScheduleService {
     private validateSlotUpdates;
     private checkSlotConflicts;
     private transformVisitSlot;
+    private validateAndFormatTime;
+    private compareTimeStrings;
 }
 //# sourceMappingURL=scheduleService.d.ts.map

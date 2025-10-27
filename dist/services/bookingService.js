@@ -2,9 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BookingService = void 0;
 const prisma_1 = require("../generated/prisma");
+const systemLogService_1 = require("./systemLogService");
 class BookingService {
     constructor() {
         this.prisma = new prisma_1.PrismaClient();
+        this.systemLogService = new systemLogService_1.SystemLogService();
     }
     async createBooking(bookingData, userId) {
         // Validate slot availability
@@ -27,6 +29,26 @@ class BookingService {
         });
         // Update slot booked count
         await this.updateSlotBookedCount(bookingData.slotId);
+        // Get visitor and slot information for logging
+        const [visitor, slot] = await Promise.all([
+            this.prisma.visitor.findUnique({ where: { id: bookingData.visitorId } }),
+            this.prisma.visitSlot.findUnique({ where: { id: bookingData.slotId } })
+        ]);
+        // Log the booking creation
+        try {
+            await this.systemLogService.logBookingCreated({
+                bookingId: booking.id,
+                visitorName: visitor?.name || 'Unknown Visitor',
+                slotDate: slot?.date.toISOString().split('T')[0] || 'Unknown Date',
+                slotTime: slot?.startTime || 'Unknown Time',
+                groupSize: bookingData.groupSize,
+                userId: userId
+            });
+        }
+        catch (logError) {
+            // Don't fail the main operation if logging fails
+            console.error('Failed to log booking creation:', logError);
+        }
         return this.transformBooking(booking);
     }
     async confirmBooking(bookingId, userId) {
@@ -52,6 +74,26 @@ class BookingService {
         });
         // Update slot booked count
         await this.updateSlotBookedCount(booking.slotId);
+        // Get visitor and slot information for logging
+        const [visitor, slot] = await Promise.all([
+            this.prisma.visitor.findUnique({ where: { id: booking.visitorId } }),
+            this.prisma.visitSlot.findUnique({ where: { id: booking.slotId } })
+        ]);
+        // Log the booking cancellation
+        try {
+            await this.systemLogService.logBookingCancelled({
+                bookingId: booking.id,
+                visitorName: visitor?.name || 'Unknown Visitor',
+                slotDate: slot?.date.toISOString().split('T')[0] || 'Unknown Date',
+                slotTime: slot?.startTime || 'Unknown Time',
+                reason: reason,
+                userId: userId
+            });
+        }
+        catch (logError) {
+            // Don't fail the main operation if logging fails
+            console.error('Failed to log booking cancellation:', logError);
+        }
         return this.transformBooking(booking);
     }
     async getBookings(filters) {

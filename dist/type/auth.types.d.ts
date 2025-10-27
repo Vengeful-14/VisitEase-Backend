@@ -24,6 +24,8 @@ export interface LoginResponse {
     };
     token: string;
     refreshToken?: string;
+    sessionToken: string;
+    sessionExpiresAt: string;
 }
 export interface TokenResponse {
     accessToken: string;

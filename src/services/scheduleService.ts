@@ -6,7 +6,7 @@ export interface VisitSlot {
   date: string;
   startTime: string; // Format: "HH:MM:SS" or "HH:MM"
   endTime: string;   // Format: "HH:MM:SS" or "HH:MM"
-  duration: number;
+  durationMinutes: number;
   capacity: number;
   bookedCount: number;
   status: string;
@@ -214,7 +214,7 @@ export class ScheduleService {
     return this.transformVisitSlot(slot);
   }
 
-  async updateSlot(id: string, updates: Partial<VisitSlot>, userId: string): Promise<VisitSlot> {
+  async updateSlot(id: string, updates: Partial<VisitSlot> & { date?: Date | string }, userId: string): Promise<VisitSlot> {
     console.log('ScheduleService - updateSlot called with:', {
       id,
       updates,
@@ -242,7 +242,7 @@ export class ScheduleService {
     if (updates.date) {
       // Parse date properly - handle both Date objects and date strings
       let parsedDate: Date;
-      if (updates.date instanceof Date) {
+      if (updates.date && typeof updates.date === 'object' && (updates.date as any) instanceof Date) {
         parsedDate = updates.date;
       } else if (typeof updates.date === 'string') {
         const dateStr = updates.date.trim();
@@ -280,13 +280,11 @@ export class ScheduleService {
     
     if (updates.durationMinutes) {
       updateData.durationMinutes = updates.durationMinutes;
-    } else if (updates.duration) {
-      updateData.durationMinutes = updates.duration;
     }
     
     if (updates.capacity) updateData.capacity = updates.capacity;
     if (updates.status) updateData.status = updates.status;
-    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.description !== undefined) updateData.description = updates.description || null;
 
     if (Object.keys(updateData).length === 0) {
       throw new Error('No valid fields to update');
@@ -307,7 +305,7 @@ export class ScheduleService {
         startTime: slot.startTime,
         endTime: slot.endTime,
         capacity: slot.capacity,
-        description: slot.description,
+        description: slot.description || undefined,
         userId: userId,
         changes: updates
       });
@@ -556,7 +554,7 @@ export class ScheduleService {
       date: data.date.toISOString().split('T')[0],
       startTime: data.startTime, // Now a string
       endTime: data.endTime,     // Now a string
-      duration: data.durationMinutes,
+      durationMinutes: data.durationMinutes,
       capacity: data.capacity,
       bookedCount: data.bookedCount,
       status: data.status,

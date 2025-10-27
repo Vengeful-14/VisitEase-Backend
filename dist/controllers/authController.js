@@ -118,6 +118,8 @@ const loginUser = async (req, res) => {
             user: userData,
             token: tokenPair.accessToken,
             refreshToken: tokenPair.refreshToken,
+            sessionToken,
+            sessionExpiresAt: sessionExpiresAt.toISOString(),
         };
         const successResponse = {
             success: true,
@@ -152,7 +154,7 @@ const refreshToken = async (req, res) => {
         const { verifyRefreshToken } = await Promise.resolve().then(() => __importStar(require('../auth')));
         const { userId } = verifyRefreshToken(refreshToken);
         // Find user to get current role and email
-        const user = await (0, userQueries_1.findUserByEmail)(userId);
+        const user = await (0, userQueries_1.findUserById)(userId);
         if (!user || !user.isActive) {
             const errorResponse = {
                 success: false,
@@ -189,14 +191,20 @@ const refreshToken = async (req, res) => {
     }
 };
 exports.refreshToken = refreshToken;
-// Logout controller with session management
+// Logout controller - simplified without session token requirement
 const logoutUser = async (req, res) => {
     try {
-        // Extract session token from request headers or body
-        const sessionToken = req.headers['x-session-token'] || req.body.sessionToken;
+        // Extract session token from request headers or body (optional)
+        const sessionToken = req.headers['x-session-token'] || req.body?.sessionToken;
+        // If session token is provided, try to deactivate it (but don't fail if it doesn't exist)
         if (sessionToken) {
-            // Deactivate the user session
-            await (0, userQueries_1.deactivateUserSession)(sessionToken);
+            try {
+                await (0, userQueries_1.deactivateUserSession)(sessionToken);
+            }
+            catch (sessionError) {
+                // Log the error but don't fail the logout
+                console.warn('Session deactivation failed (session may not exist):', sessionError);
+            }
         }
         const successResponse = {
             success: true,
