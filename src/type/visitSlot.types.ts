@@ -3,8 +3,8 @@ import { SlotStatus } from '../generated/prisma';
 // Visit slot creation data interface
 export interface CreateVisitSlotData {
   date: Date;
-  startTime: Date;
-  endTime: Date;
+  startTime: string; // Format: "HH:MM:SS" or "HH:MM"
+  endTime: string;   // Format: "HH:MM:SS" or "HH:MM"
   durationMinutes: number;
   capacity: number;
   status?: SlotStatus;
@@ -16,8 +16,8 @@ export interface CreateVisitSlotData {
 export interface VisitSlotResponse {
   id: string;
   date: Date;
-  startTime: Date;
-  endTime: Date;
+  startTime: string; // Format: "HH:MM:SS" or "HH:MM"
+  endTime: string;   // Format: "HH:MM:SS" or "HH:MM"
   durationMinutes: number;
   capacity: number;
   bookedCount: number;

@@ -90,12 +90,12 @@ exports.validateUpdateSlot = [
     }),
     (0, express_validator_1.body)('startTime')
         .optional()
-        .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-        .withMessage('Start time must be in HH:MM format'),
+        .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/)
+        .withMessage('Start time must be in HH:MM or HH:MM:SS format'),
     (0, express_validator_1.body)('endTime')
         .optional()
-        .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-        .withMessage('End time must be in HH:MM format'),
+        .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/)
+        .withMessage('End time must be in HH:MM or HH:MM:SS format'),
     (0, express_validator_1.body)('duration')
         .optional()
         .isInt({ min: 15, max: 480 })

@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { ScheduleController } from '../controllers/scheduleController';
 import { authenticateToken, requireStaffOrAdmin } from '../auth/middleware';
-import { validateUpdateSlot, handleValidationErrors } from '../validator/scheduleValidator';
+import { validateUpdateSlot } from '../validator/scheduleValidator';
+import { handleValidationErrors } from '../validator/middleware';
 
 const router = Router();
 const scheduleController = new ScheduleController();

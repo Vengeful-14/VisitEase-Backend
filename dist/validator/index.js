@@ -28,6 +28,8 @@ __exportStar(require("./dashboardValidator"), exports);
 __exportStar(require("./scheduleValidator"), exports);
 // Export notification validation functions
 __exportStar(require("./notificationValidator"), exports);
+// Export system log validation functions
+__exportStar(require("./systemLogValidator"), exports);
 // Export common validation functions
 __exportStar(require("./commonValidator"), exports);
 // Export validation middleware

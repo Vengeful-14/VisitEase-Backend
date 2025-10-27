@@ -10,11 +10,13 @@ const createTimeDateTime = (hours: number, minutes: number): Date => {
   return date;
 };
 
-// Helper function to add minutes to time DateTime
-const addMinutesToTime = (timeDate: Date, minutes: number): Date => {
-  const newTime = new Date(timeDate);
-  newTime.setMinutes(newTime.getMinutes() + minutes);
-  return newTime;
+// Helper function to add minutes to time string
+const addMinutesToTime = (timeString: string, minutes: number): string => {
+  const [hours, mins] = timeString.split(':').map(Number);
+  const totalMinutes = hours * 60 + mins + minutes;
+  const newHours = Math.floor(totalMinutes / 60);
+  const newMins = totalMinutes % 60;
+  return `${newHours.toString().padStart(2, '0')}:${newMins.toString().padStart(2, '0')}`;
 };
 
 // Helper function to check if date is a weekday
@@ -33,8 +35,8 @@ const getRandomStatus = (): SlotStatus => {
 };
 
 // Generate time slots for a day
-const generateTimeSlots = (startHour: number, endHour: number, slotDurationMinutes: number): Date[] => {
-  const slots: Date[] = [];
+const generateTimeSlots = (startHour: number, endHour: number, slotDurationMinutes: number): string[] => {
+  const slots: string[] = [];
   const totalMinutes = (endHour - startHour) * 60;
   const numSlots = Math.floor(totalMinutes / slotDurationMinutes);
 
@@ -42,7 +44,8 @@ const generateTimeSlots = (startHour: number, endHour: number, slotDurationMinut
     const startMinutes = i * slotDurationMinutes;
     const startHourSlot = startHour + Math.floor(startMinutes / 60);
     const startMinuteSlot = startMinutes % 60;
-    slots.push(createTimeDateTime(startHourSlot, startMinuteSlot));
+    const timeString = `${startHourSlot.toString().padStart(2, '0')}:${startMinuteSlot.toString().padStart(2, '0')}`;
+    slots.push(timeString);
   }
 
   return slots;

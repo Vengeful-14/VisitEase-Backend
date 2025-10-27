@@ -130,7 +130,12 @@ class DashboardService {
         return upcomingSlots.map(slot => {
             const now = new Date();
             const slotDateTime = new Date(slot.date);
-            slotDateTime.setHours(slot.startTime.getHours(), slot.startTime.getMinutes(), slot.startTime.getSeconds());
+            // Parse time string (HH:MM:SS or HH:MM)
+            const timeParts = slot.startTime.split(':');
+            const hours = parseInt(timeParts[0]);
+            const minutes = parseInt(timeParts[1]);
+            const seconds = timeParts[2] ? parseInt(timeParts[2]) : 0;
+            slotDateTime.setHours(hours, minutes, seconds);
             const hoursUntil = Math.floor((slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60));
             let timeUntil = '';
             if (hoursUntil < 1) {

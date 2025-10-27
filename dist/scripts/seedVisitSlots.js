@@ -9,11 +9,13 @@ const createTimeDateTime = (hours, minutes) => {
     date.setHours(hours, minutes, 0, 0);
     return date;
 };
-// Helper function to add minutes to time DateTime
-const addMinutesToTime = (timeDate, minutes) => {
-    const newTime = new Date(timeDate);
-    newTime.setMinutes(newTime.getMinutes() + minutes);
-    return newTime;
+// Helper function to add minutes to time string
+const addMinutesToTime = (timeString, minutes) => {
+    const [hours, mins] = timeString.split(':').map(Number);
+    const totalMinutes = hours * 60 + mins + minutes;
+    const newHours = Math.floor(totalMinutes / 60);
+    const newMins = totalMinutes % 60;
+    return `${newHours.toString().padStart(2, '0')}:${newMins.toString().padStart(2, '0')}`;
 };
 // Helper function to check if date is a weekday
 const isWeekday = (date) => {
@@ -40,7 +42,8 @@ const generateTimeSlots = (startHour, endHour, slotDurationMinutes) => {
         const startMinutes = i * slotDurationMinutes;
         const startHourSlot = startHour + Math.floor(startMinutes / 60);
         const startMinuteSlot = startMinutes % 60;
-        slots.push(createTimeDateTime(startHourSlot, startMinuteSlot));
+        const timeString = `${startHourSlot.toString().padStart(2, '0')}:${startMinuteSlot.toString().padStart(2, '0')}`;
+        slots.push(timeString);
     }
     return slots;
 };

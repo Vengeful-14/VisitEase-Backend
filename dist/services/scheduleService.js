@@ -2,9 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScheduleService = void 0;
 const prisma_1 = require("../generated/prisma");
+const systemLogService_1 = require("./systemLogService");
 class ScheduleService {
     constructor() {
         this.prisma = new prisma_1.PrismaClient();
+        this.systemLogService = new systemLogService_1.SystemLogService();
     }
     async getSlots(filters) {
         const where = {};
@@ -57,25 +59,108 @@ class ScheduleService {
         };
     }
     async createSlot(slotData, userId) {
+        console.log('ScheduleService - createSlot called with data:', {
+            date: slotData.date,
+            dateType: typeof slotData.date,
+            startTime: slotData.startTime,
+            endTime: slotData.endTime,
+            capacity: slotData.capacity
+        });
         // Validate slot data
         await this.validateSlotData(slotData);
         // Check for conflicts
         await this.checkSlotConflicts(slotData);
+        // Validate and format time strings
+        const startTime = this.validateAndFormatTime(slotData.startTime);
+        const endTime = this.validateAndFormatTime(slotData.endTime);
+        // Validate that end time is after start time
+        if (this.compareTimeStrings(startTime, endTime) >= 0) {
+            throw new Error('End time must be after start time');
+        }
+        // Parse date properly - handle both Date objects and date strings
+        let parsedDate;
+        console.log('ScheduleService - Parsing date:', {
+            originalDate: slotData.date,
+            dateType: typeof slotData.date,
+            isDate: slotData.date instanceof Date
+        });
+        if (slotData.date instanceof Date) {
+            parsedDate = slotData.date;
+            console.log('ScheduleService - Date is already a Date object');
+        }
+        else if (typeof slotData.date === 'string') {
+            // Handle date string - try to parse it
+            const dateStr = slotData.date.trim();
+            console.log('ScheduleService - Processing date string:', dateStr);
+            // Check if date string is empty
+            if (!dateStr) {
+                throw new Error('Date is required');
+            }
+            if (dateStr.includes('T')) {
+                // ISO string format
+                parsedDate = new Date(dateStr);
+                console.log('ScheduleService - Parsed as ISO string');
+            }
+            else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                // Date only format (YYYY-MM-DD) - create date in UTC to avoid timezone issues
+                const isoString = dateStr + 'T00:00:00.000Z';
+                parsedDate = new Date(isoString);
+                console.log('ScheduleService - Parsed as YYYY-MM-DD format:', isoString);
+            }
+            else {
+                // Try to parse as regular date string
+                parsedDate = new Date(dateStr);
+                console.log('ScheduleService - Parsed as regular date string');
+            }
+        }
+        else {
+            throw new Error('Invalid date format');
+        }
+        console.log('ScheduleService - Final parsed date:', {
+            parsedDate,
+            isValid: !isNaN(parsedDate.getTime()),
+            isoString: parsedDate.toISOString()
+        });
+        // Validate the parsed date
+        if (isNaN(parsedDate.getTime())) {
+            throw new Error(`Invalid date provided: ${slotData.date}`);
+        }
         const slot = await this.prisma.visitSlot.create({
             data: {
-                date: new Date(slotData.date),
-                startTime: slotData.startTime,
-                endTime: slotData.endTime,
-                durationMinutes: slotData.duration,
+                date: parsedDate,
+                startTime: startTime,
+                endTime: endTime,
+                durationMinutes: slotData.durationMinutes || slotData.duration,
                 capacity: slotData.capacity,
                 status: (slotData.status || 'available'),
                 description: slotData.description || '',
                 createdBy: userId
             }
         });
+        // Log the slot creation
+        try {
+            await this.systemLogService.logSlotCreated({
+                slotId: slot.id,
+                date: slotData.date,
+                startTime: startTime,
+                endTime: endTime,
+                capacity: slotData.capacity,
+                description: slotData.description,
+                userId: userId
+            });
+        }
+        catch (logError) {
+            // Don't fail the main operation if logging fails
+            console.error('Failed to log slot creation:', logError);
+        }
         return this.transformVisitSlot(slot);
     }
     async updateSlot(id, updates, userId) {
+        console.log('ScheduleService - updateSlot called with:', {
+            id,
+            updates,
+            userId
+        });
         // Get current slot data
         const currentSlot = await this.getSlotById(id);
         if (!currentSlot) {
@@ -87,32 +172,91 @@ class ScheduleService {
         if (updates.date || updates.startTime || updates.endTime) {
             await this.checkSlotConflicts({ ...currentSlot, ...updates });
         }
-        // Prepare update data
+        // Prepare update data with proper parsing
         const updateData = {};
-        if (updates.date)
-            updateData.date = new Date(updates.date);
-        if (updates.startTime)
-            updateData.startTime = updates.startTime;
-        if (updates.endTime)
-            updateData.endTime = updates.endTime;
-        if (updates.duration)
-            updateData.durationMinutes = updates.duration;
+        if (updates.date) {
+            // Parse date properly - handle both Date objects and date strings
+            let parsedDate;
+            if (updates.date && typeof updates.date === 'object' && updates.date instanceof Date) {
+                parsedDate = updates.date;
+            }
+            else if (typeof updates.date === 'string') {
+                const dateStr = updates.date.trim();
+                if (!dateStr) {
+                    throw new Error('Date is required');
+                }
+                if (dateStr.includes('T')) {
+                    parsedDate = new Date(dateStr);
+                }
+                else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    parsedDate = new Date(dateStr + 'T00:00:00.000Z');
+                }
+                else {
+                    parsedDate = new Date(dateStr);
+                }
+            }
+            else {
+                throw new Error('Invalid date format');
+            }
+            if (isNaN(parsedDate.getTime())) {
+                throw new Error(`Invalid date provided: ${updates.date}`);
+            }
+            updateData.date = parsedDate;
+        }
+        if (updates.startTime) {
+            // Parse start time properly
+            const startTime = this.validateAndFormatTime(updates.startTime);
+            updateData.startTime = startTime;
+        }
+        if (updates.endTime) {
+            // Parse end time properly
+            const endTime = this.validateAndFormatTime(updates.endTime);
+            updateData.endTime = endTime;
+        }
+        if (updates.durationMinutes) {
+            updateData.durationMinutes = updates.durationMinutes;
+        }
         if (updates.capacity)
             updateData.capacity = updates.capacity;
         if (updates.status)
             updateData.status = updates.status;
         if (updates.description !== undefined)
-            updateData.description = updates.description;
+            updateData.description = updates.description || null;
         if (Object.keys(updateData).length === 0) {
             throw new Error('No valid fields to update');
         }
+        console.log('ScheduleService - Final update data:', updateData);
         const slot = await this.prisma.visitSlot.update({
             where: { id },
             data: updateData
         });
+        // Log the slot update
+        try {
+            await this.systemLogService.logSlotUpdated({
+                slotId: slot.id,
+                date: slot.date.toISOString().split('T')[0],
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                capacity: slot.capacity,
+                description: slot.description || undefined,
+                userId: userId,
+                changes: updates
+            });
+        }
+        catch (logError) {
+            // Don't fail the main operation if logging fails
+            console.error('Failed to log slot update:', logError);
+        }
         return this.transformVisitSlot(slot);
     }
     async deleteSlot(id, userId) {
+        // Get slot data before deletion for logging
+        const slot = await this.prisma.visitSlot.findUnique({
+            where: { id }
+        });
+        if (!slot) {
+            throw new Error('Slot not found');
+        }
         // Check if slot has active bookings
         const activeBookings = await this.prisma.booking.count({
             where: {
@@ -128,6 +272,20 @@ class ScheduleService {
         await this.prisma.visitSlot.delete({
             where: { id }
         });
+        // Log the slot deletion
+        try {
+            await this.systemLogService.logSlotDeleted({
+                slotId: slot.id,
+                date: slot.date.toISOString().split('T')[0],
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                userId: userId
+            });
+        }
+        catch (logError) {
+            // Don't fail the main operation if logging fails
+            console.error('Failed to log slot deletion:', logError);
+        }
     }
     async getScheduleStats() {
         const thirtyDaysAgo = new Date();
@@ -241,33 +399,67 @@ class ScheduleService {
         }
     }
     async checkSlotConflicts(slotData) {
-        const conflictingSlots = await this.prisma.visitSlot.findMany({
+        // Validate and format time strings
+        const startTime = this.validateAndFormatTime(slotData.startTime);
+        const endTime = this.validateAndFormatTime(slotData.endTime);
+        // Parse date properly for conflict checking
+        let parsedDate;
+        if (slotData.date instanceof Date) {
+            parsedDate = slotData.date;
+        }
+        else if (typeof slotData.date === 'string') {
+            const dateStr = slotData.date.trim();
+            // Check if date string is empty
+            if (!dateStr) {
+                throw new Error('Date is required');
+            }
+            if (dateStr.includes('T')) {
+                parsedDate = new Date(dateStr);
+            }
+            else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                // Date only format (YYYY-MM-DD) - create date in UTC to avoid timezone issues
+                parsedDate = new Date(dateStr + 'T00:00:00.000Z');
+            }
+            else {
+                // Try to parse as regular date string
+                parsedDate = new Date(dateStr);
+            }
+        }
+        else {
+            throw new Error('Invalid date format');
+        }
+        // Validate the parsed date
+        if (isNaN(parsedDate.getTime())) {
+            throw new Error(`Invalid date provided: ${slotData.date}`);
+        }
+        // Get all slots for the same date
+        const existingSlots = await this.prisma.visitSlot.findMany({
             where: {
-                date: new Date(slotData.date),
+                date: parsedDate,
                 status: {
                     not: 'cancelled'
-                },
-                OR: [
-                    {
-                        AND: [
-                            { startTime: { lt: slotData.endTime } },
-                            { endTime: { gt: slotData.startTime } }
-                        ]
-                    }
-                ]
+                }
             }
         });
-        if (conflictingSlots.length > 0) {
-            throw new Error('Time slot conflicts with existing slots');
+        // Check for time conflicts using string comparison
+        for (const existingSlot of existingSlots) {
+            const existingStart = existingSlot.startTime;
+            const existingEnd = existingSlot.endTime;
+            // Check if new slot overlaps with existing slot
+            if ((this.compareTimeStrings(startTime, existingStart) < 0 && this.compareTimeStrings(endTime, existingStart) > 0) ||
+                (this.compareTimeStrings(startTime, existingEnd) < 0 && this.compareTimeStrings(endTime, existingEnd) > 0) ||
+                (this.compareTimeStrings(startTime, existingStart) >= 0 && this.compareTimeStrings(endTime, existingEnd) <= 0)) {
+                throw new Error('Time slot conflicts with existing slots');
+            }
         }
     }
     transformVisitSlot(data) {
         return {
             id: data.id,
             date: data.date.toISOString().split('T')[0],
-            startTime: data.startTime,
-            endTime: data.endTime,
-            duration: data.durationMinutes,
+            startTime: data.startTime, // Now a string
+            endTime: data.endTime, // Now a string
+            durationMinutes: data.durationMinutes,
             capacity: data.capacity,
             bookedCount: data.bookedCount,
             status: data.status,
@@ -275,6 +467,42 @@ class ScheduleService {
             createdAt: data.createdAt,
             updatedAt: data.updatedAt
         };
+    }
+    validateAndFormatTime(timeInput) {
+        if (!timeInput) {
+            throw new Error('Time is required');
+        }
+        let timeString;
+        if (typeof timeInput === 'string') {
+            timeString = timeInput.trim();
+        }
+        else if (timeInput instanceof Date) {
+            // Convert Date to time string
+            const hours = timeInput.getHours().toString().padStart(2, '0');
+            const minutes = timeInput.getMinutes().toString().padStart(2, '0');
+            const seconds = timeInput.getSeconds().toString().padStart(2, '0');
+            timeString = `${hours}:${minutes}:${seconds}`;
+        }
+        else {
+            throw new Error('Invalid time format');
+        }
+        // Validate time format (HH:MM or HH:MM:SS)
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
+        if (!timeRegex.test(timeString)) {
+            throw new Error('Time must be in format HH:MM or HH:MM:SS');
+        }
+        // Normalize to HH:MM:SS format
+        if (timeString.length === 5) { // HH:MM format
+            timeString += ':00';
+        }
+        return timeString;
+    }
+    compareTimeStrings(time1, time2) {
+        const [h1, m1, s1] = time1.split(':').map(Number);
+        const [h2, m2, s2] = time2.split(':').map(Number);
+        const totalSeconds1 = h1 * 3600 + m1 * 60 + s1;
+        const totalSeconds2 = h2 * 3600 + m2 * 60 + s2;
+        return totalSeconds1 - totalSeconds2;
     }
 }
 exports.ScheduleService = ScheduleService;
