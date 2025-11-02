@@ -163,7 +163,7 @@ class SystemLogService {
                 readableDate: readableDate,
                 slotTime: bookingData.slotTime,
                 groupSize: bookingData.groupSize,
-                createdBy: bookingData.userName || bookingData.userId,
+                createdBy: bookingData.userName || bookingData.userId || 'Public Visitor',
                 timestamp: new Date().toISOString(),
                 details: {
                     bookingInfo: `Booking ID: ${bookingData.bookingId}`,
@@ -173,7 +173,7 @@ class SystemLogService {
                     groupInfo: `Group size: ${bookingData.groupSize} ${bookingData.groupSize === 1 ? 'person' : 'people'}`
                 }
             },
-            userId: bookingData.userId
+            userId: bookingData.userId || undefined
         });
     }
     /**
@@ -211,7 +211,7 @@ class SystemLogService {
                     impactInfo: 'This booking has been cancelled and the slot may be available for other visitors'
                 }
             },
-            userId: bookingData.userId
+            userId: bookingData.userId || undefined
         });
     }
     /**

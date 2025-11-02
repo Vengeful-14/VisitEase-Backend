@@ -144,57 +144,36 @@ class VisitorService {
     async getVisitorStats() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const [totalVisitors, newVisitorsThisMonth, returningVisitors, avgGroupSize, groupSizeStats, mostPopularOrg, specialRequirementsData] = await Promise.all([
+        // Define completed booking filter once
+        const completedBookingFilter = { status: 'completed' };
+        const [totalVisitors, newVisitorsThisMonth, returningVisitors, avgGroupSize, groupSizeStats, completedBookingsForOrg, specialRequirementsData] = await Promise.all([
+            this.prisma.visitor.count({ where: { isActive: true } }),
+            this.prisma.visitor.count({ where: { isActive: true, createdAt: { gte: thirtyDaysAgo } } }),
+            // Count visitors who have at least one COMPLETED booking
             this.prisma.visitor.count({
-                where: { isActive: true }
+                where: { isActive: true, bookings: { some: completedBookingFilter } }
             }),
-            this.prisma.visitor.count({
-                where: {
-                    isActive: true,
-                    createdAt: { gte: thirtyDaysAgo }
-                }
-            }),
-            this.prisma.visitor.count({
-                where: {
-                    isActive: true,
-                    bookings: {
-                        some: {
-                            status: 'confirmed'
-                        }
-                    }
-                }
-            }),
+            // Average group size from COMPLETED bookings only
             this.prisma.booking.aggregate({
-                where: {
-                    status: { in: ['confirmed', 'tentative'] }
-                },
+                where: completedBookingFilter,
                 _avg: { groupSize: true }
             }),
+            // Min / Max / Count from COMPLETED bookings only
             this.prisma.booking.aggregate({
-                where: {
-                    status: { in: ['confirmed', 'tentative'] }
-                },
+                where: completedBookingFilter,
                 _min: { groupSize: true },
                 _max: { groupSize: true },
                 _count: { groupSize: true }
             }),
-            this.prisma.visitor.groupBy({
-                by: ['organization'],
-                where: {
-                    isActive: true,
-                    AND: [
-                        { organization: { not: null } },
-                        { organization: { not: '' } }
-                    ]
-                },
-                _count: { organization: true },
-                orderBy: { _count: { organization: 'desc' } },
-                take: 1
+            // Fetch COMPLETED bookings with visitor organization to compute counts by booking
+            this.prisma.booking.findMany({
+                where: completedBookingFilter,
+                select: {
+                    id: true,
+                    visitor: { select: { organization: true, visitorType: true } }
+                }
             }),
-            this.prisma.visitor.findMany({
-                where: { isActive: true },
-                select: { specialRequirements: true }
-            })
+            this.prisma.visitor.findMany({ where: { isActive: true }, select: { specialRequirements: true } })
         ]);
         // Process special requirements data
         const specialRequirementsCounts = {};
@@ -217,7 +196,24 @@ class VisitorService {
             minGroupSize: groupSizeStats._min.groupSize || 0,
             maxGroupSize: groupSizeStats._max.groupSize || 0,
             totalBookings: groupSizeStats._count.groupSize || 0,
-            mostPopularOrganization: mostPopularOrg[0]?.organization || 'N/A',
+            mostPopularOrganization: (() => {
+                const freq = {};
+                (completedBookingsForOrg || []).forEach(b => {
+                    const org = (b.visitor?.organization || '').trim();
+                    if (!org)
+                        return;
+                    freq[org] = (freq[org] || 0) + 1; // count bookings, not visitors
+                });
+                let topOrg = 'N/A';
+                let topCount = 0;
+                Object.entries(freq).forEach(([org, count]) => {
+                    if (count > topCount) {
+                        topOrg = org;
+                        topCount = count;
+                    }
+                });
+                return topOrg;
+            })(),
             specialRequirements,
             specialRequirementsCount
         };

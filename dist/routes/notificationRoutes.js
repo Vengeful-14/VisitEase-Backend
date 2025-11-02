@@ -17,6 +17,10 @@ router.get('/templates', notificationController.getTemplates.bind(notificationCo
 router.post('/', middleware_1.requireStaffOrAdmin, notificationController.createNotification.bind(notificationController));
 // POST /api/v1/notifications/templates - Create notification template (Staff/Admin only)
 router.post('/templates', middleware_1.requireStaffOrAdmin, notificationController.createTemplate.bind(notificationController));
+// POST /api/v1/notifications/send-sms-booking - Send SMS notification for a booking (Staff/Admin only)
+router.post('/send-sms-booking', middleware_1.requireStaffOrAdmin, notificationController.sendSMSForBooking.bind(notificationController));
+// POST /api/v1/notifications/send-email-booking - Send email notification for a booking (Staff/Admin only)
+router.post('/send-email-booking', middleware_1.requireStaffOrAdmin, notificationController.sendEmailForBooking.bind(notificationController));
 // PUT /api/v1/notifications/:id/send - Send notification (Staff/Admin only)
 router.put('/:id/send', middleware_1.requireStaffOrAdmin, notificationController.sendNotification.bind(notificationController));
 // PUT /api/v1/notifications/:id/status - Update notification status (Staff/Admin only)

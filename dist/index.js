@@ -15,8 +15,13 @@ const visitorSlotRoutes_1 = __importDefault(require("./routes/visitorSlotRoutes"
 const bookingRoutes_1 = __importDefault(require("./routes/bookingRoutes"));
 const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
 const scheduleRoutes_1 = __importDefault(require("./routes/scheduleRoutes"));
+const publicScheduleRoutes_1 = __importDefault(require("./routes/publicScheduleRoutes"));
+const publicBookingRoutes_1 = __importDefault(require("./routes/publicBookingRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
+const reportsRoutes_1 = __importDefault(require("./routes/reportsRoutes"));
 const systemLogRoutes_1 = __importDefault(require("./routes/systemLogRoutes"));
+const slotExpiryScheduler_1 = require("./scripts/slotExpiryScheduler");
+const bookingReminderScheduler_1 = require("./scripts/bookingReminderScheduler");
 // Create an Express application
 const app = (0, express_1.default)();
 const port = 3000;
@@ -26,10 +31,12 @@ const corsOptions = {
         'http://localhost:3000', // React default port
         'http://localhost:3001', // Alternative React port
         'http://localhost:5173', // Vite default port
+        'http://localhost:5174', // Vite alternative port
         'http://localhost:8080', // Alternative frontend port
         'http://127.0.0.1:3000', // Alternative localhost
         'http://127.0.0.1:3001',
         'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
         'http://127.0.0.1:8080',
         // Add your production frontend URL here when deploying
         // 'https://your-frontend-domain.com'
@@ -43,16 +50,20 @@ const corsOptions = {
 app.use((0, cors_1.default)(corsOptions)); // Enable CORS
 app.use(express_1.default.json()); // Parse JSON bodies
 app.use(express_1.default.urlencoded({ extended: true })); // Parse URL-encoded bodies
-// API Routes
+// Public API Routes (no authentication required)
+app.use('/api/v1/public/schedule', publicScheduleRoutes_1.default);
+app.use('/api/v1/public/booking', publicBookingRoutes_1.default);
+// API Routes (authentication required)
 app.use('/api/v1/user', userRoutes_1.default);
 app.use('/api/v1/auth', authRoutes_1.default);
-app.use('/api/v1/visitor', visitorRoutes_1.default);
+app.use('/api/v1/visitors', visitorRoutes_1.default);
 app.use('/api/v1/visitor-slot', visitorSlotRoutes_1.default);
 app.use('/api/v1/booking', bookingRoutes_1.default);
 app.use('/api/v1/dashboard', dashboardRoutes_1.default);
 app.use('/api/v1/schedule', scheduleRoutes_1.default);
 app.use('/api/v1/notifications', notificationRoutes_1.default);
 app.use('/api/v1/system-logs', systemLogRoutes_1.default);
+app.use('/api/v1/reports', reportsRoutes_1.default);
 // Define a route handler for the default home page
 app.get('/', (req, res) => {
     res.json({
@@ -142,5 +153,8 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
     console.log(`[server]: Server is running at http://localhost:${port}`);
     console.log(`[server]: API Documentation available at http://localhost:${port}`);
+    // Start background schedulers
+    (0, slotExpiryScheduler_1.startSlotExpiryScheduler)();
+    (0, bookingReminderScheduler_1.startBookingReminderScheduler)();
 });
 //# sourceMappingURL=index.js.map

@@ -183,6 +183,94 @@ class ScheduleController {
             res.status(500).json(errorResponse);
         }
     }
+    async expireOldSlots(req, res) {
+        try {
+            const result = await this.scheduleService.expirePastUnbookedSlots();
+            const successResponse = {
+                success: true,
+                message: `Expired ${result.expiredCount} past unbooked slots`,
+                data: result
+            };
+            res.status(200).json(successResponse);
+        }
+        catch (error) {
+            console.error('Expire old slots error:', error);
+            const errorResponse = {
+                success: false,
+                message: 'Failed to expire old slots'
+            };
+            res.status(500).json(errorResponse);
+        }
+    }
+    // Public method - no authentication required
+    async getPublicAvailableSlots(req, res) {
+        try {
+            const filters = {
+                dateFrom: req.query.dateFrom,
+                dateTo: req.query.dateTo,
+            };
+            const result = await this.scheduleService.getPublicAvailableSlots(filters);
+            const successResponse = {
+                success: true,
+                message: 'Available slots retrieved successfully',
+                data: result
+            };
+            res.status(200).json(successResponse);
+        }
+        catch (error) {
+            console.error('Get public available slots error:', error);
+            const errorResponse = {
+                success: false,
+                message: 'Failed to retrieve available slots'
+            };
+            res.status(500).json(errorResponse);
+        }
+    }
+    // Public method - no authentication required (read-only)
+    async getPublicSlot(req, res) {
+        try {
+            const { id } = req.params;
+            const slot = await this.scheduleService.getSlotById(id);
+            if (!slot) {
+                const errorResponse = {
+                    success: false,
+                    message: 'Slot not found'
+                };
+                res.status(404).json(errorResponse);
+                return;
+            }
+            // Only return if slot is available and not expired
+            const now = new Date();
+            const slotStart = new Date(slot.date);
+            try {
+                const [hh, mm, ss] = String(slot.startTime || '00:00:00').split(':').map(v => parseInt(v || '0', 10));
+                slotStart.setHours(hh || 0, mm || 0, ss || 0, 0);
+            }
+            catch { }
+            if (slotStart < now || slot.status !== 'available') {
+                const errorResponse = {
+                    success: false,
+                    message: 'Slot is no longer available'
+                };
+                res.status(404).json(errorResponse);
+                return;
+            }
+            const successResponse = {
+                success: true,
+                message: 'Slot retrieved successfully',
+                data: slot
+            };
+            res.status(200).json(successResponse);
+        }
+        catch (error) {
+            console.error('Get public slot error:', error);
+            const errorResponse = {
+                success: false,
+                message: 'Failed to retrieve slot'
+            };
+            res.status(500).json(errorResponse);
+        }
+    }
 }
 exports.ScheduleController = ScheduleController;
 //# sourceMappingURL=scheduleController.js.map

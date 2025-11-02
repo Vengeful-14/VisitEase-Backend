@@ -61,7 +61,7 @@ export declare class SystemLogService {
         slotDate: string;
         slotTime: string;
         groupSize: number;
-        userId: string;
+        userId: string | null;
         userName?: string;
     }): Promise<void>;
     /**
@@ -73,7 +73,7 @@ export declare class SystemLogService {
         slotDate: string;
         slotTime: string;
         reason?: string;
-        userId: string;
+        userId: string | null;
         userName?: string;
     }): Promise<void>;
     /**

@@ -141,6 +141,7 @@ const getSlotDescription = (status) => {
         booked: 'Fully booked',
         cancelled: 'Cancelled due to maintenance',
         maintenance: 'Under maintenance - not available',
+        expired: 'Expired slot - no longer available',
     };
     return descriptions[status];
 };

@@ -10,5 +10,8 @@ export declare class ScheduleController {
     deleteSlot(req: Request, res: Response<ApiResponse>): Promise<void>;
     getStats(req: Request, res: Response<ApiResponse>): Promise<void>;
     getIssues(req: Request, res: Response<ApiResponse>): Promise<void>;
+    expireOldSlots(req: Request, res: Response<ApiResponse>): Promise<void>;
+    getPublicAvailableSlots(req: Request, res: Response<ApiResponse>): Promise<void>;
+    getPublicSlot(req: Request, res: Response<ApiResponse>): Promise<void>;
 }
 //# sourceMappingURL=scheduleController.d.ts.map

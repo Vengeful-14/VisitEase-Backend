@@ -33,6 +33,10 @@ export declare class ScheduleService {
     private prisma;
     private systemLogService;
     constructor();
+    expirePastUnbookedSlots(referenceDate?: Date): Promise<{
+        expiredCount: number;
+        cutoffDate: string;
+    }>;
     getSlots(filters: {
         dateRange?: string;
         status?: string;
@@ -51,6 +55,13 @@ export declare class ScheduleService {
     getScheduleStats(): Promise<ScheduleStats>;
     getScheduleIssues(): Promise<ScheduleIssue[]>;
     getSlotById(id: string): Promise<VisitSlot | null>;
+    getPublicAvailableSlots(filters?: {
+        dateFrom?: string;
+        dateTo?: string;
+    }): Promise<{
+        slots: VisitSlot[];
+        total: number;
+    }>;
     private validateSlotData;
     private validateSlotUpdates;
     private checkSlotConflicts;

@@ -16,6 +16,7 @@ export interface Notification {
 }
 export declare class NotificationService {
     private prisma;
+    private emailService;
     constructor();
     createNotification(notificationData: {
         type: string;
@@ -52,6 +53,8 @@ export declare class NotificationService {
     private sendEmail;
     private sendSMS;
     private sendInAppNotification;
+    sendSMSForBooking(bookingId: string, userId: string, customMessage?: string): Promise<Notification>;
+    sendEmailForBooking(bookingId: string, userId: string): Promise<Notification>;
     private transformNotification;
 }
 //# sourceMappingURL=notificationService.d.ts.map

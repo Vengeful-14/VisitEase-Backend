@@ -33,7 +33,10 @@ export interface Booking {
 export declare class BookingService {
     private prisma;
     private systemLogService;
+    private emailService;
     constructor();
+    private generateTrackingToken;
+    private ensureUniqueTrackingToken;
     createBooking(bookingData: {
         slotId: string;
         visitorId: string;
@@ -57,6 +60,33 @@ export declare class BookingService {
     private validateSlotAvailability;
     private updateSlotBookedCount;
     private updateSlotStatus;
+    getSlotForAvailability(slotId: string): Promise<{
+        id: string;
+        capacity: number;
+        status: string;
+    } | null>;
+    getBookingsForSlot(slotId: string): Promise<Array<{
+        status: string;
+        groupSize: number;
+    }>>;
+    createPublicBooking(bookingData: {
+        slotId: string;
+        visitor: {
+            name: string;
+            email: string;
+            phone?: string;
+            organization?: string;
+            visitorType?: string;
+            specialRequirements?: string;
+            country?: string;
+        };
+        groupSize: number;
+        specialRequests?: string;
+    }): Promise<Booking & {
+        trackingToken: string;
+    }>;
+    trackBooking(email: string, trackingToken: string): Promise<Booking | null>;
+    cancelPublicBooking(email: string, trackingToken: string, reason: string): Promise<Booking>;
     private transformBooking;
 }
 //# sourceMappingURL=bookingService.d.ts.map
