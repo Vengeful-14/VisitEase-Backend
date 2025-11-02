@@ -144,7 +144,7 @@ class VisitorService {
     async getVisitorStats() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const [totalVisitors, newVisitorsThisMonth, returningVisitors, avgGroupSize, mostPopularOrg] = await Promise.all([
+        const [totalVisitors, newVisitorsThisMonth, returningVisitors, avgGroupSize, groupSizeStats, mostPopularOrg, specialRequirementsData] = await Promise.all([
             this.prisma.visitor.count({
                 where: { isActive: true }
             }),
@@ -165,26 +165,61 @@ class VisitorService {
                 }
             }),
             this.prisma.booking.aggregate({
-                where: { status: 'confirmed' },
+                where: {
+                    status: { in: ['confirmed', 'tentative'] }
+                },
                 _avg: { groupSize: true }
+            }),
+            this.prisma.booking.aggregate({
+                where: {
+                    status: { in: ['confirmed', 'tentative'] }
+                },
+                _min: { groupSize: true },
+                _max: { groupSize: true },
+                _count: { groupSize: true }
             }),
             this.prisma.visitor.groupBy({
                 by: ['organization'],
                 where: {
                     isActive: true,
-                    organization: { not: null }
+                    AND: [
+                        { organization: { not: null } },
+                        { organization: { not: '' } }
+                    ]
                 },
                 _count: { organization: true },
                 orderBy: { _count: { organization: 'desc' } },
                 take: 1
+            }),
+            this.prisma.visitor.findMany({
+                where: { isActive: true },
+                select: { specialRequirements: true }
             })
         ]);
+        // Process special requirements data
+        const specialRequirementsCounts = {};
+        specialRequirementsData.forEach(visitor => {
+            const requirement = (visitor.specialRequirements || '').trim();
+            if (requirement) {
+                specialRequirementsCounts[requirement] = (specialRequirementsCounts[requirement] || 0) + 1;
+            }
+        });
+        const specialRequirements = Object.entries(specialRequirementsCounts).map(([requirement, count]) => ({
+            requirement,
+            count
+        }));
+        const specialRequirementsCount = Object.values(specialRequirementsCounts).reduce((sum, c) => sum + c, 0);
         return {
             totalVisitors,
             newVisitorsThisMonth,
             returningVisitors,
             averageGroupSize: Math.round((avgGroupSize._avg.groupSize || 0) * 10) / 10,
-            mostPopularOrganization: mostPopularOrg[0]?.organization || 'N/A'
+            minGroupSize: groupSizeStats._min.groupSize || 0,
+            maxGroupSize: groupSizeStats._max.groupSize || 0,
+            totalBookings: groupSizeStats._count.groupSize || 0,
+            mostPopularOrganization: mostPopularOrg[0]?.organization || 'N/A',
+            specialRequirements,
+            specialRequirementsCount
         };
     }
     async getVisitorById(id) {

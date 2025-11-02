@@ -30,7 +30,10 @@ export interface UpcomingVisit {
   booking: {
     id: string;
     status: string;
+    groupSize: number;
+    specialRequests: string | null;
   } | null;
+  totalBookings: number;
   timeUntil: string;
 }
 
@@ -104,11 +107,14 @@ export class DashboardService {
       }
     });
 
+    // Slots that have any active bookings (confirmed or tentative) in the last 30 days
     const bookedSlots = await this.prisma.visitSlot.count({
       where: {
-        status: 'booked',
-        date: {
-          gte: thirtyDaysAgo
+        date: { gte: thirtyDaysAgo },
+        bookings: {
+          some: {
+            status: { in: ['confirmed', 'tentative'] as any }
+          }
         }
       }
     });
@@ -127,6 +133,14 @@ export class DashboardService {
       },
       _count: true
     });
+
+    // Total visitors with at least one COMPLETED booking (overall)
+    const completedVisitorsGrouped = await this.prisma.booking.groupBy({
+      by: ['visitorId'],
+      where: { status: 'completed' },
+      _count: { visitorId: true }
+    });
+    const totalVisitorsCompleted = completedVisitorsGrouped.length;
 
     // Get capacity utilization for last 7 days
     const capacityStats = await this.prisma.visitSlot.aggregate({
@@ -151,7 +165,8 @@ export class DashboardService {
       upcomingVisits: upcomingSlots,
       availableSlots,
       bookedSlots,
-      totalVisitors: revenueStats._sum.groupSize || 0,
+      // Prefer visitors with completed bookings; fallback to today's confirmed group size sum
+      totalVisitors: totalVisitorsCompleted || revenueStats._sum.groupSize || 0,
       totalBookings: revenueStats._count || 0,
       revenue: revenueStats._sum.totalAmount?.toNumber() || 0,
       capacityUtilization: Math.round(utilizationPercentage * 100) / 100
@@ -161,14 +176,23 @@ export class DashboardService {
   async getUpcomingVisits(limit: number = 5): Promise<UpcomingVisit[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
+    // Only get TODAY's slots that have confirmed or tentative bookings
     const upcomingSlots = await this.prisma.visitSlot.findMany({
       where: {
         date: {
-          gte: today
+          gte: today,
+          lt: tomorrow
         },
-        status: {
-          in: ['available', 'booked']
+        bookings: {
+          some: {
+            status: {
+              in: ['confirmed', 'tentative']
+            }
+          }
         }
       },
       include: {
@@ -214,7 +238,9 @@ export class DashboardService {
         timeUntil = `${days} day${days > 1 ? 's' : ''}`;
       }
 
-      const booking = slot.bookings[0]; // Get first booking if exists
+      // Get all bookings for this slot
+      const bookings = slot.bookings || [];
+      const primaryBooking = bookings[0]; // Get first booking for primary visitor info
 
       return {
         id: slot.id,
@@ -227,14 +253,17 @@ export class DashboardService {
           bookedCount: slot.bookedCount,
           capacity: slot.capacity
         },
-        visitor: booking?.visitor ? {
-          name: booking.visitor.name,
-          email: booking.visitor.email
+        visitor: primaryBooking?.visitor ? {
+          name: primaryBooking.visitor.name,
+          email: primaryBooking.visitor.email
         } : null,
-        booking: booking ? {
-          id: booking.id,
-          status: booking.status
+        booking: primaryBooking ? {
+          id: primaryBooking.id,
+          status: primaryBooking.status,
+          groupSize: primaryBooking.groupSize,
+          specialRequests: primaryBooking.specialRequests
         } : null,
+        totalBookings: bookings.length,
         timeUntil
       };
     });

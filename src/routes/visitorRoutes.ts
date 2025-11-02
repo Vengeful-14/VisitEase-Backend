@@ -11,11 +11,11 @@ router.use(authenticateToken);
 // GET /api/v1/visitors - Get visitors with filtering
 router.get('/', visitorController.getVisitors.bind(visitorController));
 
+// GET /api/v1/visitors/statistics - Get visitor statistics (MUST come before /:id)
+router.get('/statistics', visitorController.getStats.bind(visitorController));
+
 // GET /api/v1/visitors/:id - Get specific visitor
 router.get('/:id', visitorController.getVisitor.bind(visitorController));
-
-// GET /api/v1/visitors/statistics - Get visitor statistics
-router.get('/statistics', visitorController.getStats.bind(visitorController));
 
 // POST /api/v1/visitors - Create new visitor (Staff/Admin only)
 router.post('/', requireStaffOrAdmin, visitorController.createVisitor.bind(visitorController));

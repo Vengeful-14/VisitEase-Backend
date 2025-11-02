@@ -208,4 +208,222 @@ export class BookingController {
       res.status(400).json(errorResponse);
     }
   }
+
+  // Public method - no authentication required
+  async checkPublicAvailability(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const { slotId } = req.params;
+      const groupSize = parseInt(req.query.groupSize as string) || 1;
+
+      if (!slotId) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Slot ID is required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      if (groupSize < 1) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Group size must be at least 1'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      // Get slot and calculate actual booked capacity
+      const slot = await this.bookingService.getSlotForAvailability(slotId);
+      
+      if (!slot) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Slot not found'
+        };
+        res.status(404).json(errorResponse);
+        return;
+      }
+
+      // Calculate actual booked capacity from bookings (not cached bookedCount)
+      const bookings = await this.bookingService.getBookingsForSlot(slotId);
+      const totalBookedCapacity = bookings.reduce((sum, booking) => {
+        // Only count confirmed and tentative bookings
+        if (booking.status === 'confirmed' || booking.status === 'tentative') {
+          return sum + (booking.groupSize || 0);
+        }
+        return sum;
+      }, 0);
+
+      const availableCapacity = slot.capacity - totalBookedCapacity;
+      // Allow booking if there's available capacity and slot is not cancelled or expired
+      // Note: Status might be 'booked' but still have capacity if status wasn't updated correctly
+      const isSlotBookable = slot.status !== 'cancelled' && slot.status !== 'expired';
+      const canAccommodate = availableCapacity >= groupSize && availableCapacity > 0 && isSlotBookable;
+      
+      // Debug logging
+      console.log(`[Availability Check] Slot: ${slotId}, Status: ${slot.status}, Capacity: ${slot.capacity}, Booked: ${totalBookedCapacity}, Available: ${availableCapacity}, Requested: ${groupSize}, Can Accommodate: ${canAccommodate}`);
+
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'Availability checked successfully',
+        data: {
+          available: canAccommodate,
+          capacity: slot.capacity,
+          booked: totalBookedCapacity,
+          remaining: availableCapacity,
+          canAccommodate: canAccommodate,
+          slotStatus: slot.status
+        }
+      };
+
+      res.status(200).json(successResponse);
+    } catch (error) {
+      console.error('Check public availability error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to check availability'
+      };
+      res.status(500).json(errorResponse);
+    }
+  }
+
+  // Public method - no authentication required
+  async createPublicBooking(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const { slotId, visitor, groupSize, specialRequests } = req.body;
+
+      if (!slotId || !visitor || !groupSize) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Missing required fields: slotId, visitor, and groupSize are required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      if (!visitor.name || !visitor.email) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Visitor name and email are required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const booking = await this.bookingService.createPublicBooking({
+        slotId,
+        visitor,
+        groupSize: parseInt(groupSize),
+        specialRequests
+      });
+
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'Booking created successfully',
+        data: booking
+      };
+
+      res.status(201).json(successResponse);
+    } catch (error) {
+      console.error('Create public booking error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create booking'
+      };
+      res.status(400).json(errorResponse);
+    }
+  }
+
+  // Public method - no authentication required
+  async trackBooking(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const { email, token } = req.query;
+
+      if (!email || !token) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Email and token are required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const booking = await this.bookingService.trackBooking(
+        email as string,
+        token as string
+      );
+
+      if (!booking) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Booking not found. Please check your email and tracking token.'
+        };
+        res.status(404).json(errorResponse);
+        return;
+      }
+
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'Booking found successfully',
+        data: booking
+      };
+
+      res.status(200).json(successResponse);
+    } catch (error) {
+      console.error('Track booking error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to track booking'
+      };
+      res.status(500).json(errorResponse);
+    }
+  }
+
+  // Public method - cancel booking by email and token (no authentication required)
+  async cancelPublicBooking(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const { email, token } = req.body;
+
+      if (!email || !token) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Email and token are required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const { reason } = req.body;
+      if (!reason || reason.trim().length === 0) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Cancellation reason is required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const booking = await this.bookingService.cancelPublicBooking(
+        email as string,
+        token as string,
+        reason as string
+      );
+
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'Booking cancelled successfully',
+        data: booking
+      };
+
+      res.status(200).json(successResponse);
+    } catch (error) {
+      console.error('Cancel public booking error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to cancel booking'
+      };
+      res.status(400).json(errorResponse);
+    }
+  }
 }

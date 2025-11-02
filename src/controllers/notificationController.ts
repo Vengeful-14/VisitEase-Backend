@@ -215,4 +215,88 @@ export class NotificationController {
       res.status(400).json(errorResponse);
     }
   }
+
+  async sendSMSForBooking(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'User authentication required'
+        };
+        res.status(401).json(errorResponse);
+        return;
+      }
+
+      const { bookingId, message } = req.body;
+
+      if (!bookingId) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Booking ID is required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const notification = await this.notificationService.sendSMSForBooking(bookingId, userId, message);
+      
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'SMS notification sent successfully',
+        data: notification
+      };
+
+      res.status(200).json(successResponse);
+    } catch (error) {
+      console.error('Send SMS for booking error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to send SMS notification'
+      };
+      res.status(400).json(errorResponse);
+    }
+  }
+
+  async sendEmailForBooking(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'User authentication required'
+        };
+        res.status(401).json(errorResponse);
+        return;
+      }
+
+      const { bookingId } = req.body;
+
+      if (!bookingId) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Booking ID is required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      const notification = await this.notificationService.sendEmailForBooking(bookingId, userId);
+      
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'Email notification sent successfully',
+        data: notification
+      };
+
+      res.status(200).json(successResponse);
+    } catch (error) {
+      console.error('Send email for booking error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to send email notification'
+      };
+      res.status(400).json(errorResponse);
+    }
+  }
 }

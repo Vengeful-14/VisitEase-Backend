@@ -23,6 +23,12 @@ router.post('/', requireStaffOrAdmin, notificationController.createNotification.
 // POST /api/v1/notifications/templates - Create notification template (Staff/Admin only)
 router.post('/templates', requireStaffOrAdmin, notificationController.createTemplate.bind(notificationController));
 
+// POST /api/v1/notifications/send-sms-booking - Send SMS notification for a booking (Staff/Admin only)
+router.post('/send-sms-booking', requireStaffOrAdmin, notificationController.sendSMSForBooking.bind(notificationController));
+
+// POST /api/v1/notifications/send-email-booking - Send email notification for a booking (Staff/Admin only)
+router.post('/send-email-booking', requireStaffOrAdmin, notificationController.sendEmailForBooking.bind(notificationController));
+
 // PUT /api/v1/notifications/:id/send - Send notification (Staff/Admin only)
 router.put('/:id/send', requireStaffOrAdmin, notificationController.sendNotification.bind(notificationController));
 

@@ -29,6 +29,7 @@ enum SlotStatus {
   booked
   cancelled
   maintenance
+  expired
 }
 
 enum VisitorType {
@@ -276,6 +277,7 @@ model Booking {
   confirmedAt         DateTime?     @map("confirmed_at") @db.Timestamptz(6)
   cancelledAt         DateTime?     @map("cancelled_at") @db.Timestamptz(6)
   cancellationReason  String?       @map("cancellation_reason") @db.Text
+  trackingToken       String?       @unique @map("tracking_token") @db.VarChar(50)
 
   // Relations
   slot     VisitSlot        @relation(fields: [slotId], references: [id], onDelete: Cascade)
@@ -283,6 +285,8 @@ model Booking {
   creator  User?            @relation(fields: [createdBy], references: [id])
   feedback VisitorFeedback[]
   analytics VisitorAnalytics[]
+  smsStatus BookingSmsStatus?
+  emailStatus BookingEmailStatus?
 
   @@map("bookings")
   @@index([slotId])
@@ -290,6 +294,7 @@ model Booking {
   @@index([status])
   @@index([createdAt])
   @@index([createdAt, status])
+  @@index([trackingToken])
 }
 
 model OAuthProvider {
@@ -484,6 +489,60 @@ model NotificationTemplate {
   updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("notification_templates")
+}
+
+enum SmsSendingStatus {
+  pending
+  sent
+  failed
+  max_attempts_reached
+}
+
+model BookingSmsStatus {
+  id                String           @id @default(uuid()) @db.Uuid
+  bookingId         String           @unique @map("booking_id") @db.Uuid
+  status            SmsSendingStatus @default(pending)
+  attemptCount      Int              @default(0) @map("attempt_count")
+  maxAttempts       Int              @default(3) @map("max_attempts")
+  lastAttemptAt     DateTime?        @map("last_attempt_at") @db.Timestamptz(6)
+  sentAt            DateTime?        @map("sent_at") @db.Timestamptz(6)
+  lastErrorMessage  String?         @map("last_error_message") @db.Text
+  notificationId    String?          @map("notification_id") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("booking_sms_status")
+  @@index([bookingId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum EmailSendingStatus {
+  pending
+  sent
+  failed
+}
+
+model BookingEmailStatus {
+  id                String            @id @default(uuid()) @db.Uuid
+  bookingId         String            @unique @map("booking_id") @db.Uuid
+  status            EmailSendingStatus @default(pending)
+  sentAt            DateTime?         @map("sent_at") @db.Timestamptz(6)
+  lastErrorMessage  String?          @map("last_error_message") @db.Text
+  notificationId    String?          @map("notification_id") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("booking_email_status")
+  @@index([bookingId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model SystemSetting {

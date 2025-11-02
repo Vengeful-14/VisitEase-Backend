@@ -2,15 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BookingService = void 0;
 const prisma_1 = require("../generated/prisma");
+const systemLogService_1 = require("./systemLogService");
 class BookingService {
     constructor() {
         this.prisma = new prisma_1.PrismaClient();
+        this.systemLogService = new systemLogService_1.SystemLogService();
     }
     async createBooking(bookingData, userId) {
         // Validate slot availability
         await this.validateSlotAvailability(bookingData.slotId, bookingData.groupSize);
-        // Calculate total amount
-        const totalAmount = await this.calculateBookingTotal(bookingData.visitorId, bookingData.groupSize, bookingData.slotId);
         // Create booking
         const booking = await this.prisma.booking.create({
             data: {
@@ -18,15 +18,33 @@ class BookingService {
                 visitorId: bookingData.visitorId,
                 status: 'tentative',
                 groupSize: bookingData.groupSize,
-                totalAmount,
-                paymentStatus: 'pending',
-                paymentMethod: (bookingData.paymentMethod || null),
                 specialRequests: bookingData.specialRequests || null,
                 createdBy: userId
             }
         });
-        // Update slot booked count
+        // Update slot booked count and status
         await this.updateSlotBookedCount(bookingData.slotId);
+        await this.updateSlotStatus(bookingData.slotId);
+        // Get visitor and slot information for logging
+        const [visitor, slot] = await Promise.all([
+            this.prisma.visitor.findUnique({ where: { id: bookingData.visitorId } }),
+            this.prisma.visitSlot.findUnique({ where: { id: bookingData.slotId } })
+        ]);
+        // Log the booking creation
+        try {
+            await this.systemLogService.logBookingCreated({
+                bookingId: booking.id,
+                visitorName: visitor?.name || 'Unknown Visitor',
+                slotDate: slot?.date.toISOString().split('T')[0] || 'Unknown Date',
+                slotTime: slot?.startTime || 'Unknown Time',
+                groupSize: bookingData.groupSize,
+                userId: userId
+            });
+        }
+        catch (logError) {
+            // Don't fail the main operation if logging fails
+            console.error('Failed to log booking creation:', logError);
+        }
         return this.transformBooking(booking);
     }
     async confirmBooking(bookingId, userId) {
@@ -37,8 +55,9 @@ class BookingService {
                 confirmedAt: new Date()
             }
         });
-        // Update slot booked count
+        // Update slot booked count and status
         await this.updateSlotBookedCount(booking.slotId);
+        await this.updateSlotStatus(booking.slotId);
         return this.transformBooking(booking);
     }
     async cancelBooking(bookingId, reason, userId) {
@@ -50,8 +69,29 @@ class BookingService {
                 cancellationReason: reason
             }
         });
-        // Update slot booked count
+        // Update slot booked count and status
         await this.updateSlotBookedCount(booking.slotId);
+        await this.updateSlotStatus(booking.slotId);
+        // Get visitor and slot information for logging
+        const [visitor, slot] = await Promise.all([
+            this.prisma.visitor.findUnique({ where: { id: booking.visitorId } }),
+            this.prisma.visitSlot.findUnique({ where: { id: booking.slotId } })
+        ]);
+        // Log the booking cancellation
+        try {
+            await this.systemLogService.logBookingCancelled({
+                bookingId: booking.id,
+                visitorName: visitor?.name || 'Unknown Visitor',
+                slotDate: slot?.date.toISOString().split('T')[0] || 'Unknown Date',
+                slotTime: slot?.startTime || 'Unknown Time',
+                reason: reason,
+                userId: userId
+            });
+        }
+        catch (logError) {
+            // Don't fail the main operation if logging fails
+            console.error('Failed to log booking cancellation:', logError);
+        }
         return this.transformBooking(booking);
     }
     async getBookings(filters) {
@@ -101,10 +141,6 @@ class BookingService {
             updateData.status = updates.status;
         if (updates.groupSize)
             updateData.groupSize = updates.groupSize;
-        if (updates.paymentStatus)
-            updateData.paymentStatus = updates.paymentStatus;
-        if (updates.paymentMethod !== undefined)
-            updateData.paymentMethod = updates.paymentMethod;
         if (updates.notes !== undefined)
             updateData.notes = updates.notes;
         if (updates.specialRequests !== undefined)
@@ -116,9 +152,10 @@ class BookingService {
             where: { id },
             data: updateData
         });
-        // Update slot booked count if group size changed
+        // Update slot booked count and status if group size changed
         if (updates.groupSize) {
             await this.updateSlotBookedCount(booking.slotId);
+            await this.updateSlotStatus(booking.slotId);
         }
         return this.transformBooking(booking);
     }
@@ -136,47 +173,6 @@ class BookingService {
             throw new Error('Not enough capacity for the requested group size');
         }
     }
-    async calculateBookingTotal(visitorId, groupSize, slotId) {
-        // Get visitor type
-        const visitor = await this.prisma.visitor.findUnique({
-            where: { id: visitorId },
-            select: { visitorType: true }
-        });
-        const visitorType = visitor?.visitorType || 'individual';
-        // Get slot date for pricing
-        const slot = await this.prisma.visitSlot.findUnique({
-            where: { id: slotId },
-            select: { date: true }
-        });
-        const slotDate = slot?.date;
-        // Get pricing rule
-        const pricingRule = await this.prisma.pricingRule.findFirst({
-            where: {
-                visitorType,
-                effectiveDate: { lte: slotDate },
-                OR: [
-                    { endDate: null },
-                    { endDate: { gte: slotDate } }
-                ],
-                isActive: true
-            },
-            orderBy: { createdAt: 'desc' }
-        });
-        let basePrice = 15.00; // Default price
-        let discountPercentage = 0;
-        let minGroupSize = null;
-        if (pricingRule) {
-            basePrice = pricingRule.basePrice.toNumber();
-            discountPercentage = pricingRule.groupDiscountPercentage.toNumber();
-            minGroupSize = pricingRule.minGroupSize;
-        }
-        let total = basePrice * groupSize;
-        // Apply group discount
-        if (minGroupSize && groupSize >= minGroupSize) {
-            total = total * (1 - discountPercentage / 100);
-        }
-        return Math.round(total * 100) / 100; // Round to 2 decimal places
-    }
     async updateSlotBookedCount(slotId) {
         const bookedCount = await this.prisma.booking.aggregate({
             where: {
@@ -192,6 +188,32 @@ class BookingService {
             data: { bookedCount: bookedCount._sum.groupSize || 0 }
         });
     }
+    async updateSlotStatus(slotId) {
+        // Get current slot info
+        const slot = await this.prisma.visitSlot.findUnique({
+            where: { id: slotId },
+            select: { capacity: true, bookedCount: true }
+        });
+        if (!slot)
+            return;
+        // Determine new status based on capacity
+        let newStatus;
+        if (slot.bookedCount >= slot.capacity) {
+            newStatus = 'booked'; // Fully booked
+        }
+        else if (slot.bookedCount > 0) {
+            newStatus = 'partially_booked'; // Partially booked
+        }
+        else {
+            newStatus = 'available'; // Available
+        }
+        console.log(`Updating slot ${slotId} status: ${slot.bookedCount}/${slot.capacity} -> ${newStatus}`);
+        // Update slot status
+        await this.prisma.visitSlot.update({
+            where: { id: slotId },
+            data: { status: newStatus }
+        });
+    }
     transformBooking(data) {
         return {
             id: data.id,
@@ -199,16 +221,33 @@ class BookingService {
             visitorId: data.visitorId,
             status: data.status,
             groupSize: data.groupSize,
-            totalAmount: data.totalAmount.toNumber(),
-            paymentStatus: data.paymentStatus,
-            paymentMethod: data.paymentMethod,
             notes: data.notes,
             specialRequests: data.specialRequests,
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
             confirmedAt: data.confirmedAt,
             cancelledAt: data.cancelledAt,
-            cancellationReason: data.cancellationReason
+            cancellationReason: data.cancellationReason,
+            // Include visitor summary if available
+            visitor: data.visitor ? {
+                id: data.visitor.id,
+                name: data.visitor.name,
+                email: data.visitor.email,
+                phone: data.visitor.phone,
+                organization: data.visitor.organization,
+                visitorType: data.visitor.visitorType,
+                specialRequirements: data.visitor.specialRequirements
+            } : undefined,
+            // Include slot summary if available
+            slot: data.slot ? {
+                id: data.slot.id,
+                date: data.slot.date,
+                startTime: data.slot.startTime,
+                endTime: data.slot.endTime,
+                capacity: data.slot.capacity,
+                bookedCount: data.slot.bookedCount,
+                description: data.slot.description
+            } : undefined
         };
     }
 }

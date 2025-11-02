@@ -11,8 +11,13 @@ import visitorSlotRoutes from './routes/visitorSlotRoutes';
 import bookingRoutes from './routes/bookingRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import scheduleRoutes from './routes/scheduleRoutes';
+import publicScheduleRoutes from './routes/publicScheduleRoutes';
+import publicBookingRoutes from './routes/publicBookingRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import reportsRoutes from './routes/reportsRoutes';
 import systemLogRoutes from './routes/systemLogRoutes';
+import { startSlotExpiryScheduler } from './scripts/slotExpiryScheduler';
+import { startBookingReminderScheduler } from './scripts/bookingReminderScheduler';
 
 // Create an Express application
 const app: Express = express();
@@ -24,10 +29,12 @@ const corsOptions = {
     'http://localhost:3000',    // React default port
     'http://localhost:3001',    // Alternative React port
     'http://localhost:5173',    // Vite default port
+    'http://localhost:5174',    // Vite alternative port
     'http://localhost:8080',    // Alternative frontend port
     'http://127.0.0.1:3000',    // Alternative localhost
     'http://127.0.0.1:3001',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
     'http://127.0.0.1:8080',
     // Add your production frontend URL here when deploying
     // 'https://your-frontend-domain.com'
@@ -43,16 +50,21 @@ app.use(cors(corsOptions)); // Enable CORS
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
-// API Routes
+// Public API Routes (no authentication required)
+app.use('/api/v1/public/schedule', publicScheduleRoutes);
+app.use('/api/v1/public/booking', publicBookingRoutes);
+
+// API Routes (authentication required)
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/visitor', visitorRoutes);
+app.use('/api/v1/visitors', visitorRoutes);
 app.use('/api/v1/visitor-slot', visitorSlotRoutes);
 app.use('/api/v1/booking', bookingRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/schedule', scheduleRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/system-logs', systemLogRoutes);
+app.use('/api/v1/reports', reportsRoutes);
 
 // Define a route handler for the default home page
 app.get('/', (req: Request, res: Response) => {
@@ -146,4 +158,7 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
   console.log(`[server]: API Documentation available at http://localhost:${port}`);
+  // Start background schedulers
+  startSlotExpiryScheduler();
+  startBookingReminderScheduler();
 });
