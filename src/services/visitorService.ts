@@ -214,7 +214,7 @@ export class VisitorService {
         by: ['organization'],
         where: {
           isActive: true,
-          organization: { not: null }
+          organization: { not: null } as any
         },
         _count: { organization: true },
         orderBy: { _count: { organization: 'desc' } },

@@ -159,7 +159,7 @@ const generateNovemberSlots = async (createdBy?: string): Promise<void> => {
 
 // Helper function to generate slot descriptions
 const getSlotDescription = (status: SlotStatus): string => {
-  const descriptions = {
+  const descriptions: Record<SlotStatus, string> = {
     available: 'Available for booking',
     booked: 'Fully booked',
     cancelled: 'Cancelled due to maintenance',
