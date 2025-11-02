@@ -31,4 +31,7 @@ router.put('/slots/:id', requireStaffOrAdmin, scheduleController.updateSlot.bind
 // DELETE /api/v1/schedule/slots/:id - Delete slot (Staff/Admin only)
 router.delete('/slots/:id', requireStaffOrAdmin, scheduleController.deleteSlot.bind(scheduleController));
 
+// POST /api/v1/schedule/expire - Expire past unbooked slots (Staff/Admin only)
+router.post('/expire', requireStaffOrAdmin, scheduleController.expireOldSlots.bind(scheduleController));
+
 export default router;

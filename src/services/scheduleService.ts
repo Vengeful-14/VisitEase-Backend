@@ -44,6 +44,53 @@ export class ScheduleService {
     this.systemLogService = new SystemLogService();
   }
 
+  async expirePastUnbookedSlots(referenceDate?: Date): Promise<{ expiredCount: number; cutoffDate: string }> {
+    const today = referenceDate ? new Date(referenceDate) : new Date();
+    // Normalize to start of day to compare by date only
+    const cutoff = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
+    // Find candidate slots (no active bookings)
+    const candidates = await this.prisma.visitSlot.findMany({
+      where: {
+        date: { lte: cutoff as any },
+        status: { in: ['available', 'booked'] as any },
+        bookings: {
+          none: {
+            status: { in: ['tentative', 'confirmed'] as any }
+          }
+        }
+      },
+      select: { id: true, date: true, startTime: true, endTime: true }
+    });
+
+    if (candidates.length === 0) {
+      return { expiredCount: 0, cutoffDate: cutoff.toISOString() };
+    }
+
+    const result = await this.prisma.visitSlot.updateMany({
+      where: {
+        id: { in: candidates.map(c => c.id) }
+      },
+      data: { status: 'expired' as any }
+    });
+
+    // Best-effort log entry
+    try {
+      await this.systemLogService.createLog({
+        level: 'info',
+        message: `Auto-expired ${result.count} slots with no bookings up to ${cutoff.toISOString().slice(0,10)}`,
+        context: {
+          action: 'slots_auto_expired',
+          actionType: 'Schedule Maintenance',
+          expiredCount: result.count,
+          cutoffDate: cutoff.toISOString(),
+        },
+      });
+    } catch {}
+
+    return { expiredCount: result.count, cutoffDate: cutoff.toISOString() };
+  }
+
   async getSlots(filters: {
     dateRange?: string;
     status?: string;
@@ -102,8 +149,30 @@ export class ScheduleService {
       this.prisma.visitSlot.count({ where })
     ]);
 
+    // Auto-mark past slots as expired in response (and persist best-effort)
+    const now = new Date();
+
+    const normalizedSlots = await Promise.all(slots.map(async (slot) => {
+      // Build slot start datetime using date + startTime
+      const slotStart = new Date(slot.date);
+      try {
+        const [hh, mm, ss] = String(slot.startTime || '00:00:00').split(':').map(v => parseInt(v || '0', 10));
+        slotStart.setHours(hh || 0, mm || 0, ss || 0, 0);
+      } catch {}
+      const shouldExpire = now > slotStart && slot.status !== ('cancelled' as any) && slot.status !== ('expired' as any);
+      if (shouldExpire) {
+        // Persist in background (ignore errors to not block listing)
+        this.prisma.visitSlot.update({
+          where: { id: slot.id },
+          data: { status: 'expired' as any }
+        }).catch(() => {});
+        return this.transformVisitSlot({ ...slot, status: 'expired' });
+      }
+      return this.transformVisitSlot(slot);
+    }));
+
     return {
-      slots: slots.map(slot => this.transformVisitSlot(slot)),
+      slots: normalizedSlots,
       total
     };
   }
@@ -233,7 +302,7 @@ export class ScheduleService {
 
     // Check for conflicts if time/date changed
     if (updates.date || updates.startTime || updates.endTime) {
-      await this.checkSlotConflicts({ ...currentSlot, ...updates });
+      await this.checkSlotConflicts({ ...currentSlot, ...updates }, id); // Pass current slot ID to exclude it
     }
 
     // Prepare update data with proper parsing
@@ -443,6 +512,82 @@ export class ScheduleService {
     return slot ? this.transformVisitSlot(slot) : null;
   }
 
+  // Public method to get only available slots for booking (no authentication required)
+  async getPublicAvailableSlots(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<{slots: VisitSlot[], total: number}> {
+    const now = new Date();
+    const where: any = {
+      status: 'available',
+      // Only get slots that haven't passed yet (date + startTime)
+    };
+
+    // Date range filter (optional)
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.date = {};
+      if (filters.dateFrom) {
+        where.date.gte = new Date(filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        where.date.lte = new Date(filters.dateTo);
+      }
+    } else {
+      // Default: only future dates
+      where.date = {
+        gte: new Date(now.toISOString().split('T')[0])
+      };
+    }
+
+    const [slots, total] = await Promise.all([
+      this.prisma.visitSlot.findMany({
+        where,
+        include: {
+          bookings: {
+            where: {
+              status: {
+                in: ['confirmed', 'tentative']
+              }
+            }
+          }
+        },
+        orderBy: [
+          { date: 'asc' },
+          { startTime: 'asc' }
+        ]
+      }),
+      this.prisma.visitSlot.count({ where })
+    ]);
+
+    // Filter out past slots based on date + startTime and calculate booked count
+    const normalizedSlots = slots
+      .map(slot => {
+        // Calculate actual booked count from bookings relation
+        const bookedCount = slot.bookings?.length || 0;
+        const transformedSlot = this.transformVisitSlot({
+          ...slot,
+          bookedCount
+        });
+        return transformedSlot;
+      })
+      .filter(slot => {
+        // Build slot start datetime using date + startTime
+        const slotStart = new Date(slot.date);
+        try {
+          const [hh, mm, ss] = String(slot.startTime || '00:00:00').split(':').map(v => parseInt(v || '0', 10));
+          slotStart.setHours(hh || 0, mm || 0, ss || 0, 0);
+        } catch {}
+        // Only return slots that haven't passed yet and have available capacity
+        const availableSpots = slot.capacity - slot.bookedCount;
+        return now < slotStart && slot.status === 'available' && availableSpots > 0;
+      });
+
+    return {
+      slots: normalizedSlots,
+      total: normalizedSlots.length
+    };
+  }
+
   private async validateSlotData(slotData: any): Promise<void> {
     // Validate date is not in the past
     if (new Date(slotData.date) < new Date()) {
@@ -487,7 +632,7 @@ export class ScheduleService {
     }
   }
 
-  private async checkSlotConflicts(slotData: any): Promise<void> {
+  private async checkSlotConflicts(slotData: any, excludeSlotId?: string): Promise<void> {
     // Validate and format time strings
     const startTime = this.validateAndFormatTime(slotData.startTime);
     const endTime = this.validateAndFormatTime(slotData.endTime);
@@ -522,27 +667,40 @@ export class ScheduleService {
       throw new Error(`Invalid date provided: ${slotData.date}`);
     }
 
-    // Get all slots for the same date
-    const existingSlots = await this.prisma.visitSlot.findMany({
-      where: {
-        date: parsedDate,
-        status: {
-          not: 'cancelled'
-        }
+    // Build where clause - exclude cancelled slots and optionally the current slot being updated
+    const where: any = {
+      date: parsedDate,
+      status: {
+        not: 'cancelled'
       }
+    };
+    
+    // Exclude the current slot if we're updating (not creating)
+    if (excludeSlotId) {
+      where.id = {
+        not: excludeSlotId
+      };
+    }
+
+    // Get all slots for the same date (excluding the current slot if updating)
+    const existingSlots = await this.prisma.visitSlot.findMany({
+      where
     });
 
     // Check for time conflicts using string comparison
+    // Two slots conflict if they overlap (not just touch at boundaries)
     for (const existingSlot of existingSlots) {
       const existingStart = existingSlot.startTime;
       const existingEnd = existingSlot.endTime;
       
-      // Check if new slot overlaps with existing slot
-      if (
-        (this.compareTimeStrings(startTime, existingStart) < 0 && this.compareTimeStrings(endTime, existingStart) > 0) ||
-        (this.compareTimeStrings(startTime, existingEnd) < 0 && this.compareTimeStrings(endTime, existingEnd) > 0) ||
-        (this.compareTimeStrings(startTime, existingStart) >= 0 && this.compareTimeStrings(endTime, existingEnd) <= 0)
-      ) {
+      // Check if the new/updated slot overlaps with an existing slot
+      // Overlap occurs when:
+      // 1. New slot starts before existing slot ends AND new slot ends after existing slot starts
+      // This means they have time in common (not just touching endpoints)
+      const newStartBeforeExistingEnd = this.compareTimeStrings(startTime, existingEnd) < 0;
+      const newEndAfterExistingStart = this.compareTimeStrings(endTime, existingStart) > 0;
+      
+      if (newStartBeforeExistingEnd && newEndAfterExistingStart) {
         throw new Error('Time slot conflicts with existing slots');
       }
     }

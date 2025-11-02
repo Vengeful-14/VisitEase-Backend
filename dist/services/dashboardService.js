@@ -100,13 +100,21 @@ class DashboardService {
     async getUpcomingVisits(limit = 5) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        // Only get TODAY's slots that have confirmed or tentative bookings
         const upcomingSlots = await this.prisma.visitSlot.findMany({
             where: {
                 date: {
-                    gte: today
+                    gte: today,
+                    lt: tomorrow
                 },
-                status: {
-                    in: ['available', 'booked']
+                bookings: {
+                    some: {
+                        status: {
+                            in: ['confirmed', 'tentative']
+                        }
+                    }
                 }
             },
             include: {
@@ -148,7 +156,9 @@ class DashboardService {
                 const days = Math.floor(hoursUntil / 24);
                 timeUntil = `${days} day${days > 1 ? 's' : ''}`;
             }
-            const booking = slot.bookings[0]; // Get first booking if exists
+            // Get all bookings for this slot
+            const bookings = slot.bookings || [];
+            const primaryBooking = bookings[0]; // Get first booking for primary visitor info
             return {
                 id: slot.id,
                 slot: {
@@ -160,14 +170,17 @@ class DashboardService {
                     bookedCount: slot.bookedCount,
                     capacity: slot.capacity
                 },
-                visitor: booking?.visitor ? {
-                    name: booking.visitor.name,
-                    email: booking.visitor.email
+                visitor: primaryBooking?.visitor ? {
+                    name: primaryBooking.visitor.name,
+                    email: primaryBooking.visitor.email
                 } : null,
-                booking: booking ? {
-                    id: booking.id,
-                    status: booking.status
+                booking: primaryBooking ? {
+                    id: primaryBooking.id,
+                    status: primaryBooking.status,
+                    groupSize: primaryBooking.groupSize,
+                    specialRequests: primaryBooking.specialRequests
                 } : null,
+                totalBookings: bookings.length,
                 timeUntil
             };
         });

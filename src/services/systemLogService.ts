@@ -194,7 +194,7 @@ export class SystemLogService {
     slotDate: string;
     slotTime: string;
     groupSize: number;
-    userId: string;
+    userId: string | null;
     userName?: string;
   }): Promise<void> {
     const readableDate = new Date(bookingData.slotDate).toLocaleDateString('en-US', {
@@ -220,7 +220,7 @@ export class SystemLogService {
         readableDate: readableDate,
         slotTime: bookingData.slotTime,
         groupSize: bookingData.groupSize,
-        createdBy: bookingData.userName || bookingData.userId,
+        createdBy: bookingData.userName || bookingData.userId || 'Public Visitor',
         timestamp: new Date().toISOString(),
         details: {
           bookingInfo: `Booking ID: ${bookingData.bookingId}`,
@@ -230,7 +230,7 @@ export class SystemLogService {
           groupInfo: `Group size: ${bookingData.groupSize} ${bookingData.groupSize === 1 ? 'person' : 'people'}`
         }
       },
-      userId: bookingData.userId
+      userId: bookingData.userId || undefined
     });
   }
 
@@ -243,7 +243,7 @@ export class SystemLogService {
     slotDate: string;
     slotTime: string;
     reason?: string;
-    userId: string;
+    userId: string | null;
     userName?: string;
   }): Promise<void> {
     const readableDate = new Date(bookingData.slotDate).toLocaleDateString('en-US', {
@@ -280,7 +280,7 @@ export class SystemLogService {
           impactInfo: 'This booking has been cancelled and the slot may be available for other visitors'
         }
       },
-      userId: bookingData.userId
+      userId: bookingData.userId || undefined
     });
   }
 

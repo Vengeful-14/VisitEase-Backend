@@ -24,7 +24,15 @@ export interface VisitorStats {
     newVisitorsThisMonth: number;
     returningVisitors: number;
     averageGroupSize: number;
+    minGroupSize: number;
+    maxGroupSize: number;
+    totalBookings: number;
     mostPopularOrganization: string;
+    specialRequirements: {
+        requirement: string;
+        count: number;
+    }[];
+    specialRequirementsCount: number;
 }
 export declare class VisitorService {
     private prisma;

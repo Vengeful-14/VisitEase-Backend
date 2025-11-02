@@ -27,7 +27,10 @@ export interface UpcomingVisit {
     booking: {
         id: string;
         status: string;
+        groupSize: number;
+        specialRequests: string | null;
     } | null;
+    totalBookings: number;
     timeUntil: string;
 }
 export interface RecentActivity {

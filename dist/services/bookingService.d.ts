@@ -4,9 +4,6 @@ export interface Booking {
     visitorId: string;
     status: string;
     groupSize: number;
-    totalAmount: number;
-    paymentStatus: string;
-    paymentMethod?: string;
     notes?: string;
     specialRequests?: string;
     createdAt: Date;
@@ -14,6 +11,24 @@ export interface Booking {
     confirmedAt?: Date;
     cancelledAt?: Date;
     cancellationReason?: string;
+    visitor?: {
+        id: string;
+        name: string;
+        email: string;
+        phone?: string;
+        organization?: string;
+        visitorType?: string;
+        specialRequirements?: string;
+    };
+    slot?: {
+        id: string;
+        date: Date;
+        startTime: string;
+        endTime: string;
+        capacity: number;
+        bookedCount: number;
+        description?: string;
+    };
 }
 export declare class BookingService {
     private prisma;
@@ -24,7 +39,6 @@ export declare class BookingService {
         visitorId: string;
         groupSize: number;
         specialRequests?: string;
-        paymentMethod?: string;
     }, userId: string): Promise<Booking>;
     confirmBooking(bookingId: string, userId: string): Promise<Booking>;
     cancelBooking(bookingId: string, reason: string, userId: string): Promise<Booking>;
@@ -41,8 +55,8 @@ export declare class BookingService {
     getBookingById(id: string): Promise<Booking | null>;
     updateBooking(id: string, updates: Partial<Booking>, userId: string): Promise<Booking>;
     private validateSlotAvailability;
-    private calculateBookingTotal;
     private updateSlotBookedCount;
+    private updateSlotStatus;
     private transformBooking;
 }
 //# sourceMappingURL=bookingService.d.ts.map
