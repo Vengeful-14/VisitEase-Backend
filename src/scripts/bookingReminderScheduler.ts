@@ -44,12 +44,12 @@ export async function sendBookingReminders(): Promise<{ sent: number; failed: nu
       // Only send reminders if visitor has email and tracking token
       visitor: {
         email: {
-          not: null
-        }
+          isNot: null
+        } as any
       },
       trackingToken: {
-        not: null
-      }
+        isNot: null
+      } as any
     },
     include: {
       visitor: true,

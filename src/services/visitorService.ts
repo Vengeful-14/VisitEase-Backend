@@ -264,23 +264,6 @@ export class VisitorService {
         });
         return topOrg;
       })(),
-      mostPopularVisitorType: (() => {
-        const freqType: Record<string, number> = {};
-        (completedBookingsForOrg || []).forEach(b => {
-          const vt = (b.visitor?.visitorType || '').trim();
-          if (!vt) return;
-          freqType[vt] = (freqType[vt] || 0) + 1;
-        });
-        let topType = 'N/A';
-        let topCount = 0;
-        Object.entries(freqType).forEach(([vt, count]) => {
-          if (count > topCount) {
-            topType = vt;
-            topCount = count as number;
-          }
-        });
-        return topType;
-      })(),
       specialRequirements,
       specialRequirementsCount
     };
