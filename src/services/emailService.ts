@@ -12,20 +12,21 @@ export interface BookingEmailData {
 }
 
 export class EmailService {
-  private resend: Resend;
+  private resend: Resend | null;
   private fromEmail: string;
 
   constructor() {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       console.warn('RESEND_API_KEY is not set. Email sending will be disabled.');
+      this.resend = null;
     } else {
       // Validate API key format (Resend API keys typically start with 're_')
       if (!apiKey.startsWith('re_')) {
         console.warn('RESEND_API_KEY format may be incorrect. Expected format: re_xxxxx');
       }
+      this.resend = new Resend(apiKey);
     }
-    this.resend = new Resend(apiKey);
     // Default from email - should be configured in environment variables
     // NOTE: 'onboarding@resend.dev' only works in test mode with test API keys
     // For production, you must use a verified domain email
@@ -61,7 +62,7 @@ export class EmailService {
    * Send booking confirmation email when a booking is confirmed
    */
   async sendBookingConfirmationEmail(data: BookingEmailData): Promise<boolean> {
-    if (!process.env.RESEND_API_KEY) {
+    if (!process.env.RESEND_API_KEY || !this.resend) {
       console.warn('RESEND_API_KEY not configured. Skipping email send.');
       return false;
     }
@@ -76,10 +77,7 @@ export class EmailService {
     try {
       const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/track?email=${encodeURIComponent(data.visitorEmail)}&token=${data.trackingToken}`;
       
-      // Validate API key is present before attempting to send
-      if (!process.env.RESEND_API_KEY) {
-        throw new Error('RESEND_API_KEY is not configured in environment variables');
-      }
+      // API key verified above; proceed
 
       // Resend API format - matching documentation example
       // FROM: Must be 'onboarding@resend.dev' (for test) or verified domain email
@@ -88,7 +86,9 @@ export class EmailService {
       
       // Following Resend documentation pattern
       // Rename destructured variables to avoid conflict with function parameter 'data'
-      const { data: emailResponse, error: emailError } = await this.resend.emails.send({
+      // this.resend is guaranteed after the early guard; use a non-null local ref for TS
+      const resendClient = this.resend as Resend;
+      const { data: emailResponse, error: emailError } = await resendClient.emails.send({
         from: this.fromEmail,
         to: data.visitorEmail,
         subject: `Booking Confirmed - Visit Scheduled for ${data.slotDate}`,
@@ -160,7 +160,7 @@ export class EmailService {
    * Send reminder email a day before the booking
    */
   async sendBookingReminderEmail(data: BookingEmailData): Promise<boolean> {
-    if (!process.env.RESEND_API_KEY) {
+    if (!process.env.RESEND_API_KEY || !this.resend) {
       console.warn('RESEND_API_KEY not configured. Skipping email send.');
       return false;
     }
@@ -179,7 +179,8 @@ export class EmailService {
       
       // Following Resend documentation pattern
       // Rename destructured variables to avoid conflict with function parameter 'data'
-      const { data: emailResponse, error: emailError } = await this.resend.emails.send({
+      const resendClient = this.resend as Resend;
+      const { data: emailResponse, error: emailError } = await resendClient.emails.send({
         from: this.fromEmail,
         to: data.visitorEmail,
         subject: `Reminder: Your Visit is Tomorrow - ${data.slotDate}`,
