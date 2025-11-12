@@ -172,6 +172,21 @@ export const markPasswordResetTokenAsUsed = async (token: string): Promise<void>
   }
 };
 
+// Get user by ID with password hash (for admin operations)
+export const findUserByIdWithPassword = async (id: string): Promise<User | null> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: id,
+      },
+    });
+
+    return user;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Update user password
 export const updateUserPassword = async (userId: string, passwordHash: string): Promise<void> => {
   try {

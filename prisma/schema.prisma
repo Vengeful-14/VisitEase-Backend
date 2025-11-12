@@ -278,6 +278,8 @@ model Booking {
   cancelledAt         DateTime?     @map("cancelled_at") @db.Timestamptz(6)
   cancellationReason  String?       @map("cancellation_reason") @db.Text
   trackingToken       String?       @unique @map("tracking_token") @db.VarChar(50)
+  gcashNumber         String?       @map("gcash_number") @db.VarChar(20)
+  referenceNumber     String?       @map("reference_number") @db.VarChar(50)
 
   // Relations
   slot     VisitSlot        @relation(fields: [slotId], references: [id], onDelete: Cascade)

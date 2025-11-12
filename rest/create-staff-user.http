@@ -1,0 +1,55 @@
+### POST to create a staff user (Admin only)
+### First, login as admin to get the access token
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@visitease.com",
+  "password": "Password123"
+}
+
+### Then use the access token from the login response to create a staff user
+POST http://localhost:3000/api/v1/user/staff
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+{
+  "email": "newstaff@visitease.com",
+  "name": "New Staff Member",
+  "password": "Password123",
+  "phone": "09323232325"
+}
+
+### POST to create staff user with minimal data (only required fields)
+POST http://localhost:3000/api/v1/user/staff
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+{
+  "email": "minimalstaff@visitease.com",
+  "name": "Minimal Staff",
+  "password": "Password123"
+}
+
+### POST to create staff user - should reject if role is provided
+POST http://localhost:3000/api/v1/user/staff
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+{
+  "email": "teststaff@visitease.com",
+  "name": "Test Staff",
+  "password": "Password123",
+  "role": "admin"
+}
+
+### POST to create staff user - should fail without admin token
+POST http://localhost:3000/api/v1/user/staff
+Content-Type: application/json
+
+{
+  "email": "unauthorized@visitease.com",
+  "name": "Unauthorized User",
+  "password": "Password123"
+}
+
