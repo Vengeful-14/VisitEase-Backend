@@ -17,5 +17,8 @@ router.get('/track', bookingController.trackBooking.bind(bookingController));
 // PUT /api/v1/public/booking/cancel - Cancel booking by email and token (public, no auth required)
 router.put('/cancel', bookingController.cancelPublicBooking.bind(bookingController));
 
+// PUT /api/v1/public/booking/update - Update booking by email and token (public, no auth required)
+router.put('/update', bookingController.updatePublicBooking.bind(bookingController));
+
 export default router;
 

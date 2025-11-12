@@ -78,3 +78,38 @@ export const validateRefreshToken = [
     .isString()
     .withMessage('Refresh token must be a string'),
 ];
+
+// Staff user creation validation rules (admin only - no role field allowed)
+export const validateStaffUserCreation = [
+  ...validateEmail('email'),
+  ...validateName('name'),
+  ...validatePassword,
+  body('phone')
+    .optional()
+    .isMobilePhone('any', { strictMode: false })
+    .withMessage('Please provide a valid phone number'),
+  // Explicitly reject role field if provided (even if null or empty)
+  body('role')
+    .optional()
+    .custom((value) => {
+      if (value !== undefined && value !== null && value !== '') {
+        throw new Error('Role cannot be specified. Staff users are created with staff role only.');
+      }
+      return true;
+    }),
+];
+
+// Reset staff password validation rules (admin only - requires admin password confirmation)
+export const validateResetStaffPassword = [
+  body('staffUserId')
+    .isUUID()
+    .withMessage('Staff user ID must be a valid UUID'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('New password must be at least 6 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('New password must contain at least one lowercase letter, one uppercase letter, and one number'),
+  body('adminPassword')
+    .notEmpty()
+    .withMessage('Admin password is required for confirmation'),
+];

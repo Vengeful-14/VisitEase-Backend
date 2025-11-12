@@ -291,7 +291,7 @@ export class BookingController {
   // Public method - no authentication required
   async createPublicBooking(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const { slotId, visitor, groupSize, specialRequests } = req.body;
+      const { slotId, visitor, groupSize, specialRequests, gcashNumber, referenceNumber } = req.body;
 
       if (!slotId || !visitor || !groupSize) {
         const errorResponse: ApiErrorResponse = {
@@ -311,11 +311,50 @@ export class BookingController {
         return;
       }
 
+      // Validate GCash payment information is required
+      if (!gcashNumber || !gcashNumber.trim()) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'GCash number is required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      if (gcashNumber.trim().length < 10 || gcashNumber.trim().length > 11) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'GCash number must be 10-11 digits'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      if (!referenceNumber || !referenceNumber.trim()) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'GCash reference number is required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      if (referenceNumber.trim().length < 6) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'GCash reference number must be at least 6 characters'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
       const booking = await this.bookingService.createPublicBooking({
         slotId,
         visitor,
         groupSize: parseInt(groupSize),
-        specialRequests
+        specialRequests,
+        gcashNumber,
+        referenceNumber
       });
 
       const successResponse: ApiSuccessResponse = {
@@ -422,6 +461,71 @@ export class BookingController {
       const errorResponse: ApiErrorResponse = {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to cancel booking'
+      };
+      res.status(400).json(errorResponse);
+    }
+  }
+
+  // Public method - update booking by email and token (no authentication required)
+  async updatePublicBooking(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const { email, token, groupSize, specialRequests, notes, gcashNumber, referenceNumber } = req.body;
+
+      if (!email || !token) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'Email and token are required'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      // Validate that at least one field is being updated
+      if (groupSize === undefined && specialRequests === undefined && notes === undefined && gcashNumber === undefined && referenceNumber === undefined) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'At least one field (groupSize, specialRequests, notes, gcashNumber, or referenceNumber) must be provided for update'
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      // Prepare updates object
+      const updates: { groupSize?: number; specialRequests?: string; notes?: string; gcashNumber?: string; referenceNumber?: string } = {};
+      if (groupSize !== undefined) {
+        if (typeof groupSize !== 'number' || groupSize <= 0) {
+          const errorResponse: ApiErrorResponse = {
+            success: false,
+            message: 'Group size must be a positive number'
+          };
+          res.status(400).json(errorResponse);
+          return;
+        }
+        updates.groupSize = groupSize;
+      }
+      if (specialRequests !== undefined) updates.specialRequests = specialRequests;
+      if (notes !== undefined) updates.notes = notes;
+      if (gcashNumber !== undefined) updates.gcashNumber = gcashNumber;
+      if (referenceNumber !== undefined) updates.referenceNumber = referenceNumber;
+
+      const booking = await this.bookingService.updatePublicBooking(
+        email as string,
+        token as string,
+        updates
+      );
+
+      const successResponse: ApiSuccessResponse = {
+        success: true,
+        message: 'Booking updated successfully',
+        data: booking
+      };
+
+      res.status(200).json(successResponse);
+    } catch (error) {
+      console.error('Update public booking error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update booking'
       };
       res.status(400).json(errorResponse);
     }

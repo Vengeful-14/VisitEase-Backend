@@ -7,7 +7,7 @@ Content-Type: application/json
   "name": "Khrizie Desilos",
   "password": "Password123",
   "phone": "09323232323",
-  "role": "visitor"
+  "role": "admin"
 }
 
 ### POST to register an admin user

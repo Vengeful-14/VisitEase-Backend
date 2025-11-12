@@ -507,6 +507,8 @@ export class BookingService {
     };
     groupSize: number;
     specialRequests?: string;
+    gcashNumber?: string;
+    referenceNumber?: string;
   }): Promise<Booking & { trackingToken: string }> {
     // Validate slot availability
     await this.validateSlotAvailability(bookingData.slotId, bookingData.groupSize);
@@ -542,7 +544,9 @@ export class BookingService {
         groupSize: bookingData.groupSize,
         specialRequests: bookingData.specialRequests || null,
         trackingToken: trackingToken,
-        createdBy: null // Public booking, no user
+        createdBy: null, // Public booking, no user
+        gcashNumber: bookingData.gcashNumber || null,
+        referenceNumber: bookingData.referenceNumber || null
       }
     });
 
@@ -723,7 +727,140 @@ export class BookingService {
     return this.transformBooking(cancelledBooking);
   }
 
-  private transformBooking(data: any): Booking & { trackingToken?: string; smsStatus?: any; emailStatus?: any } {
+  // Update booking by email and token (public, no auth required)
+  async updatePublicBooking(
+    email: string,
+    trackingToken: string,
+    updates: { groupSize?: number; specialRequests?: string; notes?: string; gcashNumber?: string; referenceNumber?: string }
+  ): Promise<Booking> {
+    // First verify ownership and check status by finding the booking
+    const existingBooking = await this.prisma.booking.findFirst({
+      where: {
+        trackingToken: trackingToken,
+        visitor: {
+          email: email
+        }
+      },
+      include: {
+        visitor: true,
+        slot: true
+      }
+    });
+
+    if (!existingBooking) {
+      throw new Error('Booking not found. Please check your email and tracking token.');
+    }
+
+    // Prevent updating completed or cancelled bookings
+    if (existingBooking.status === 'completed') {
+      throw new Error('Completed bookings cannot be modified');
+    }
+
+    if (existingBooking.status === 'cancelled') {
+      throw new Error('Cancelled bookings cannot be modified');
+    }
+
+    // Validate group size if being updated
+    if (updates.groupSize !== undefined && updates.groupSize !== existingBooking.groupSize) {
+      if (updates.groupSize <= 0) {
+        throw new Error('Group size must be greater than 0');
+      }
+
+      // Check if new group size fits in available capacity
+      const currentBookings = await this.prisma.booking.aggregate({
+        where: {
+          slotId: existingBooking.slotId,
+          status: { in: ['tentative', 'confirmed'] },
+          id: { not: existingBooking.id } // Exclude current booking
+        },
+        _sum: { groupSize: true }
+      });
+
+      const availableCapacity = existingBooking.slot.capacity - (currentBookings._sum.groupSize || 0);
+      const additionalCapacityNeeded = updates.groupSize - existingBooking.groupSize;
+
+      if (additionalCapacityNeeded > availableCapacity) {
+        throw new Error(`Not enough capacity. Available: ${availableCapacity}, Additional needed: ${additionalCapacityNeeded}`);
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {};
+    if (updates.groupSize !== undefined) updateData.groupSize = updates.groupSize;
+    if (updates.specialRequests !== undefined) updateData.specialRequests = updates.specialRequests;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
+    if (updates.gcashNumber !== undefined) updateData.gcashNumber = updates.gcashNumber || null;
+    if (updates.referenceNumber !== undefined) updateData.referenceNumber = updates.referenceNumber || null;
+
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('No valid fields to update');
+    }
+
+    // Update the booking using email and trackingToken in where clause
+    const updateResult = await this.prisma.booking.updateMany({
+      where: {
+        trackingToken: trackingToken,
+        visitor: {
+          email: email
+        },
+        status: {
+          notIn: ['completed', 'cancelled']
+        }
+      },
+      data: updateData
+    });
+
+    if (updateResult.count === 0) {
+      throw new Error('Booking not found or cannot be updated. Please check your email and tracking token.');
+    }
+
+    // Fetch the updated booking with all relations
+    const updatedBooking = await this.prisma.booking.findFirst({
+      where: {
+        trackingToken: trackingToken,
+        visitor: {
+          email: email
+        }
+      },
+      include: {
+        slot: {
+          select: {
+            id: true,
+            date: true,
+            startTime: true,
+            endTime: true,
+            capacity: true,
+            description: true,
+            status: true
+          }
+        },
+        visitor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            organization: true,
+            visitorType: true
+          }
+        }
+      }
+    });
+
+    if (!updatedBooking) {
+      throw new Error('Failed to retrieve updated booking');
+    }
+
+    // Update slot booked count and status if group size changed
+    if (updates.groupSize !== undefined) {
+      await this.updateSlotBookedCount(updatedBooking.slotId);
+      await this.updateSlotStatus(updatedBooking.slotId);
+    }
+
+    return this.transformBooking(updatedBooking);
+  }
+
+  private transformBooking(data: any): Booking & { trackingToken?: string; smsStatus?: any; emailStatus?: any; gcashNumber?: string; referenceNumber?: string } {
     return {
       id: data.id,
       slotId: data.slotId,
@@ -738,6 +875,8 @@ export class BookingService {
       cancelledAt: data.cancelledAt,
       cancellationReason: data.cancellationReason,
       trackingToken: data.trackingToken || undefined,
+      gcashNumber: data.gcashNumber || undefined,
+      referenceNumber: data.referenceNumber || undefined,
       // Include visitor summary if available
       visitor: data.visitor ? {
         id: data.visitor.id,
