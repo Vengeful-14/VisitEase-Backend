@@ -11,8 +11,10 @@ export class ReportsController {
 
   async getSummary(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const days = parseInt(req.query.days as string) || 7;
-      const summary = await this.reportsService.getSummary(days);
+      const days = req.query.days ? parseInt(req.query.days as string, 10) : undefined;
+      const month = req.query.month ? parseInt(req.query.month as string, 10) : undefined;
+      const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+      const summary = await this.reportsService.getSummary(days, month, year);
 
       const successResponse: ApiSuccessResponse = {
         success: true,
@@ -33,12 +35,29 @@ export class ReportsController {
 
   async getDaily(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const { days, dateFrom, dateTo } = req.query;
+      const { days, dateFrom, dateTo, month, year } = req.query;
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      
+      // If month and year are provided, calculate dateFrom and dateTo
+      if (month && year) {
+        const monthNum = parseInt(month as string, 10);
+        const yearNum = parseInt(year as string, 10);
+        const dateFromObj = new Date(yearNum, monthNum - 1, 1);
+        const dateToObj = new Date(yearNum, monthNum, 0);
+        dateToObj.setHours(23, 59, 59, 999);
+        startDate = dateFromObj.toISOString();
+        endDate = dateToObj.toISOString();
+      } else {
+        startDate = dateFrom as string | undefined;
+        endDate = dateTo as string | undefined;
+      }
+      
       const parsedDays = days ? parseInt(days as string) : undefined;
       const daily = await this.reportsService.getDaily({
         days: parsedDays,
-        dateFrom: dateFrom as string | undefined,
-        dateTo: dateTo as string | undefined,
+        dateFrom: startDate,
+        dateTo: endDate,
       });
 
       const successResponse: ApiSuccessResponse = {
@@ -59,12 +78,29 @@ export class ReportsController {
 
   async getBookingTrend(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const { days, dateFrom, dateTo } = req.query;
+      const { days, dateFrom, dateTo, month, year } = req.query;
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      
+      // If month and year are provided, calculate dateFrom and dateTo
+      if (month && year) {
+        const monthNum = parseInt(month as string, 10);
+        const yearNum = parseInt(year as string, 10);
+        const dateFromObj = new Date(yearNum, monthNum - 1, 1);
+        const dateToObj = new Date(yearNum, monthNum, 0);
+        dateToObj.setHours(23, 59, 59, 999);
+        startDate = dateFromObj.toISOString();
+        endDate = dateToObj.toISOString();
+      } else {
+        startDate = dateFrom as string | undefined;
+        endDate = dateTo as string | undefined;
+      }
+      
       const parsedDays = days ? parseInt(days as string) : undefined;
       const result = await this.reportsService.getBookingTrend({
         days: parsedDays,
-        dateFrom: dateFrom as string | undefined,
-        dateTo: dateTo as string | undefined,
+        dateFrom: startDate,
+        dateTo: endDate,
       });
 
       const successResponse: ApiSuccessResponse = {

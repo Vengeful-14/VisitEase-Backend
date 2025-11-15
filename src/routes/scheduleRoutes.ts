@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ScheduleController } from '../controllers/scheduleController';
 import { authenticateToken, requireStaffOrAdmin } from '../auth/middleware';
-import { validateUpdateSlot } from '../validator/scheduleValidator';
+import { validateUpdateSlot, validateGenerateSchedules } from '../validator/scheduleValidator';
 import { handleValidationErrors } from '../validator/middleware';
 
 const router = Router();
@@ -33,5 +33,8 @@ router.delete('/slots/:id', requireStaffOrAdmin, scheduleController.deleteSlot.b
 
 // POST /api/v1/schedule/expire - Expire past unbooked slots (Staff/Admin only)
 router.post('/expire', requireStaffOrAdmin, scheduleController.expireOldSlots.bind(scheduleController));
+
+// POST /api/v1/schedule/generate - Generate multiple schedules (Staff/Admin only)
+router.post('/generate', requireStaffOrAdmin, validateGenerateSchedules, handleValidationErrors, scheduleController.generateSchedules.bind(scheduleController));
 
 export default router;

@@ -135,3 +135,57 @@ export const validateScheduleStats = [
 export const validateScheduleIssues = [
   // No specific validation needed for basic issues request
 ];
+
+// Generate schedules validation
+export const validateGenerateSchedules = [
+  body('month')
+    .isInt({ min: 1, max: 12 })
+    .withMessage('Month must be between 1 and 12')
+    .toInt(),
+  body('year')
+    .isInt({ min: 2020, max: 2100 })
+    .withMessage('Year must be between 2020 and 2100')
+    .toInt(),
+  body('dayStartTime')
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Day start time must be in HH:MM format'),
+  body('dayEndTime')
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Day end time must be in HH:MM format')
+    .custom((value, { req }) => {
+      const startTime = req.body.dayStartTime;
+      if (startTime && value <= startTime) {
+        throw new Error('Day end time must be after day start time');
+      }
+      return true;
+    }),
+  body('slotDuration')
+    .isInt({ min: 15, max: 480 })
+    .withMessage('Slot duration must be between 15 and 480 minutes')
+    .toInt(),
+  body('capacity')
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('Capacity must be between 1 and 1000')
+    .toInt(),
+  body('excludedDays')
+    .optional()
+    .isArray()
+    .withMessage('Excluded days must be an array'),
+  body('excludedDays.*')
+    .optional()
+    .isInt({ min: 0, max: 6 })
+    .withMessage('Excluded day must be between 0 (Sunday) and 6 (Saturday)')
+    .toInt(),
+  body('vacantRanges')
+    .optional()
+    .isArray()
+    .withMessage('Vacant ranges must be an array'),
+  body('vacantRanges.*.startTime')
+    .optional()
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Vacant range start time must be in HH:MM format'),
+  body('vacantRanges.*.endTime')
+    .optional()
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Vacant range end time must be in HH:MM format'),
+];

@@ -453,8 +453,6 @@ export class BookingService {
       newStatus = 'available';
     }
 
-    console.log(`Updating slot ${slotId} status: ${slot.bookedCount}/${slot.capacity} -> ${newStatus}`);
-
     // Update slot status
     await this.prisma.visitSlot.update({
       where: { id: slotId },

@@ -11,7 +11,10 @@ export class DashboardController {
 
   async getStats(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const stats = await this.dashboardService.getDashboardStats();
+      const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      
+      const stats = await this.dashboardService.getDashboardStats(month, year);
       
       const successResponse: ApiSuccessResponse = {
         success: true,
@@ -33,7 +36,10 @@ export class DashboardController {
   async getUpcomingVisits(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
       const limit = parseInt(req.query.limit as string) || 5;
-      const visits = await this.dashboardService.getUpcomingVisits(limit);
+      const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      
+      const visits = await this.dashboardService.getUpcomingVisits(limit, month, year);
       
       const successResponse: ApiSuccessResponse = {
         success: true,
@@ -76,8 +82,10 @@ export class DashboardController {
 
   async getRevenueTrend(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const days = parseInt(req.query.days as string) || 7;
-      const trend = await this.dashboardService.getRevenueTrend(days);
+      const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      
+      const trend = await this.dashboardService.getRevenueTrend(month, year);
       
       const successResponse: ApiSuccessResponse = {
         success: true,

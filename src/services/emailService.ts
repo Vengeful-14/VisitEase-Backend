@@ -82,7 +82,6 @@ export class EmailService {
       // Resend API format - matching documentation example
       // FROM: Must be 'onboarding@resend.dev' (for test) or verified domain email
       // TO: Can be any valid email address (the recipient)
-      console.log(`Sending email - FROM: ${this.fromEmail}, TO: ${data.visitorEmail}`);
       
       // Following Resend documentation pattern
       // Rename destructured variables to avoid conflict with function parameter 'data'
@@ -121,12 +120,6 @@ export class EmailService {
         }
         
         throw new Error(`Resend API error: ${errorMessage}`);
-      }
-
-      if (emailResponse) {
-        console.log(`Confirmation email sent successfully to ${data.visitorEmail}. Email ID: ${emailResponse.id}`);
-      } else {
-        console.log(`Confirmation email sent successfully to ${data.visitorEmail}`);
       }
       
       return true;
@@ -175,8 +168,6 @@ export class EmailService {
     try {
       const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/track?email=${encodeURIComponent(data.visitorEmail)}&token=${data.trackingToken}`;
       
-      console.log(`Sending reminder email - FROM: ${this.fromEmail}, TO: ${data.visitorEmail}`);
-      
       // Following Resend documentation pattern
       // Rename destructured variables to avoid conflict with function parameter 'data'
       const resendClient = this.resend as Resend;
@@ -190,12 +181,6 @@ export class EmailService {
       if (emailError) {
         console.error('Resend API error:', JSON.stringify(emailError, null, 2));
         throw new Error(`Resend API error: ${emailError.message || JSON.stringify(emailError)}`);
-      }
-
-      if (emailResponse) {
-        console.log(`Reminder email sent successfully to ${data.visitorEmail}. Email ID: ${emailResponse.id}`);
-      } else {
-        console.log(`Reminder email sent successfully to ${data.visitorEmail}`);
       }
       
       return true;

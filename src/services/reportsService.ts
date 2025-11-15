@@ -17,29 +17,53 @@ export class ReportsService {
     this.prisma = new PrismaClient();
   }
 
-  async getSummary(days: number = 7): Promise<ReportsSummary> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - Math.max(1, days));
+  async getSummary(days?: number, month?: number, year?: number): Promise<ReportsSummary> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate date range based on month/year or days
+    let startDate: Date;
+    let endDate: Date;
+    let daysWindow: number;
+    
+    if (month && year) {
+      // First day of selected month (month is 1-indexed, Date uses 0-indexed)
+      startDate = new Date(year, month - 1, 1);
+      startDate.setHours(0, 0, 0, 0);
+      
+      // Last day of selected month
+      endDate = new Date(year, month, 0);
+      endDate.setHours(23, 59, 59, 999);
+      
+      // Calculate number of days in the month
+      daysWindow = endDate.getDate();
+    } else {
+      // Default: use days parameter
+      const daysValue = Math.max(1, days || 7);
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - daysValue + 1);
+      endDate = new Date(today);
+      daysWindow = daysValue;
+    }
 
     const [bookings, confirmedCount, cancelledCount, visitorsSum] = await Promise.all([
       this.prisma.booking.count({
-        where: { createdAt: { gte: startDate } }
+        where: { createdAt: { gte: startDate, lte: endDate } }
       }),
       this.prisma.booking.count({
-        where: { createdAt: { gte: startDate }, status: 'confirmed' }
+        where: { createdAt: { gte: startDate, lte: endDate }, status: 'confirmed' }
       }),
       this.prisma.booking.count({
-        where: { createdAt: { gte: startDate }, status: 'cancelled' }
+        where: { createdAt: { gte: startDate, lte: endDate }, status: 'cancelled' }
       }),
       this.prisma.booking.aggregate({
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: { gte: startDate, lte: endDate } },
         _sum: { groupSize: true }
       })
     ]);
 
     const totalBookings = bookings || 0;
     const totalVisitors = visitorsSum._sum.groupSize || 0;
-    const daysWindow = Math.max(1, days);
     const averageBookingsPerDay = Math.round((totalBookings / daysWindow) * 100) / 100;
     const averageVisitorsPerDay = Math.round((totalVisitors / daysWindow) * 100) / 100;
     const confirmationRate = totalBookings > 0 ? Math.round((confirmedCount / totalBookings) * 100) : 0;

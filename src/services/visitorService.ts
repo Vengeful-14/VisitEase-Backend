@@ -31,6 +31,7 @@ export interface VisitorStats {
   maxGroupSize: number;
   totalBookings: number;
   mostPopularOrganization: string;
+  mostPopularVisitorType: string;
   specialRequirements: {requirement: string, count: number}[];
   specialRequirementsCount: number;
 }
@@ -187,33 +188,69 @@ export class VisitorService {
     });
   }
 
-  async getVisitorStats(): Promise<VisitorStats> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  async getVisitorStats(month?: number, year?: number): Promise<VisitorStats> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate date range based on month/year or default to last 30 days
+    let dateFrom: Date;
+    let dateTo: Date;
+    
+    if (month && year) {
+      // First day of selected month (month is 1-indexed, Date uses 0-indexed)
+      dateFrom = new Date(year, month - 1, 1);
+      dateFrom.setHours(0, 0, 0, 0);
+      
+      // Always use the last day of the selected month (not today, even if current month)
+      dateTo = new Date(year, month, 0); // Last day of month
+      dateTo.setHours(23, 59, 59, 999);
+    } else {
+      // Default: last 30 days
+      dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - 30);
+      dateTo = new Date(today);
+    }
 
-    // Define completed booking filter once
-    const completedBookingFilter = { status: 'completed' as any };
+    // Define completed booking filter with date range
+    const completedBookingFilter = { 
+      status: 'completed' as any,
+      createdAt: {
+        gte: dateFrom,
+        lte: dateTo
+      }
+    };
 
     const [totalVisitors, newVisitorsThisMonth, returningVisitors, avgGroupSize, groupSizeStats, completedBookingsForOrg, specialRequirementsData] = await Promise.all([
+      // Total active visitors (all time, not filtered by date)
       this.prisma.visitor.count({ where: { isActive: true } }),
-      this.prisma.visitor.count({ where: { isActive: true, createdAt: { gte: thirtyDaysAgo } } }),
-      // Count visitors who have at least one COMPLETED booking
+      // New visitors created in the selected month/year
+      this.prisma.visitor.count({ where: { isActive: true, createdAt: { gte: dateFrom, lte: dateTo } } }),
+      // Count visitors who have at least one COMPLETED booking in the selected period
       this.prisma.visitor.count({
-        where: { isActive: true, bookings: { some: completedBookingFilter } }
+        where: { 
+          isActive: true, 
+          bookings: { 
+            some: completedBookingFilter
+          } 
+        }
       }),
-      // Average group size from COMPLETED bookings only
+      // Average group size from COMPLETED bookings created in the selected month/year period
+      // Calculates the average number of people per booking group from completed bookings
+      // Filtered by: status = 'completed' AND createdAt within selected month/year
       this.prisma.booking.aggregate({
         where: completedBookingFilter,
         _avg: { groupSize: true }
       }),
-      // Min / Max / Count from COMPLETED bookings only
+      // Min / Max / Count from COMPLETED bookings created in the selected month/year period
+      // Used to show the range (minimum to maximum) and total count of completed bookings
+      // Filtered by: status = 'completed' AND createdAt within selected month/year
       this.prisma.booking.aggregate({
         where: completedBookingFilter,
         _min: { groupSize: true },
         _max: { groupSize: true },
         _count: { groupSize: true }
       }),
-      // Fetch COMPLETED bookings with visitor organization to compute counts by booking
+      // Fetch COMPLETED bookings in the selected period with visitor organization
       this.prisma.booking.findMany({
         where: completedBookingFilter,
         select: {
@@ -221,6 +258,7 @@ export class VisitorService {
           visitor: { select: { organization: true, visitorType: true } }
         }
       }),
+      // Special requirements from visitors (all active visitors, not filtered by date)
       this.prisma.visitor.findMany({ where: { isActive: true }, select: { specialRequirements: true } })
     ]);
 
@@ -263,6 +301,23 @@ export class VisitorService {
           }
         });
         return topOrg;
+      })(),
+      mostPopularVisitorType: (() => {
+        const freq: Record<string, number> = {};
+        (completedBookingsForOrg || []).forEach(b => {
+          const visitorType = b.visitor?.visitorType;
+          if (!visitorType) return;
+          freq[visitorType] = (freq[visitorType] || 0) + 1; // count bookings by visitor type
+        });
+        let topType = 'N/A';
+        let topCount = 0;
+        Object.entries(freq).forEach(([type, count]) => {
+          if (count > topCount) {
+            topType = type;
+            topCount = count as number;
+          }
+        });
+        return topType;
       })(),
       specialRequirements,
       specialRequirementsCount

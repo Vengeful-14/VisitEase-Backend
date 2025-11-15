@@ -134,7 +134,11 @@ export class VisitorController {
 
   async getStats(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const stats = await this.visitorService.getVisitorStats();
+      // Parse month and year from query parameters (similar to dashboard and schedule)
+      const month = req.query.month ? parseInt(req.query.month as string, 10) : undefined;
+      const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+      
+      const stats = await this.visitorService.getVisitorStats(month, year);
       
       const successResponse: ApiSuccessResponse = {
         success: true,

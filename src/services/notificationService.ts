@@ -200,7 +200,6 @@ export class NotificationService {
   private async sendEmail(notification: any): Promise<boolean> {
     // Implement email sending logic (e.g., using SendGrid, Nodemailer, etc.)
     // This is a placeholder implementation
-    console.log(`Sending email to ${notification.recipient}: ${notification.title}`);
     
     // Simulate email sending
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -211,7 +210,6 @@ export class NotificationService {
   private async sendSMS(notification: any): Promise<boolean> {
     // Implement SMS sending logic (e.g., using Twilio, etc.)
     // This is a placeholder implementation
-    console.log(`Sending SMS to ${notification.recipient}: ${notification.message}`);
     
     // Simulate SMS sending
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -222,7 +220,6 @@ export class NotificationService {
   private async sendInAppNotification(notification: any): Promise<boolean> {
     // Implement in-app notification logic
     // This could involve WebSocket connections or database updates
-    console.log(`Sending in-app notification to ${notification.recipient}: ${notification.title}`);
     
     return true;
   }

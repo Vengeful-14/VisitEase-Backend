@@ -11,13 +11,21 @@ export class ScheduleController {
 
   async getSlots(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const filters = {
+      const filters: any = {
         dateRange: req.query.dateRange as string,
         status: req.query.status as string,
         search: req.query.search as string,
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 20
       };
+
+      // Handle dateFrom and dateTo query parameters
+      if (req.query.dateFrom) {
+        filters.dateFrom = req.query.dateFrom instanceof Date ? req.query.dateFrom : new Date(req.query.dateFrom as string);
+      }
+      if (req.query.dateTo) {
+        filters.dateTo = req.query.dateTo instanceof Date ? req.query.dateTo : new Date(req.query.dateTo as string);
+      }
 
       const result = await this.scheduleService.getSlots(filters);
       
@@ -167,7 +175,11 @@ export class ScheduleController {
 
   async getStats(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {
-      const stats = await this.scheduleService.getScheduleStats();
+      // Parse month and year from query parameters (similar to dashboard)
+      const month = req.query.month ? parseInt(req.query.month as string, 10) : undefined;
+      const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+      
+      const stats = await this.scheduleService.getScheduleStats(month, year);
       
       const successResponse: ApiSuccessResponse = {
         success: true,
@@ -299,6 +311,53 @@ export class ScheduleController {
         message: 'Failed to retrieve slot'
       };
       res.status(500).json(errorResponse);
+    }
+  }
+
+  async generateSchedules(req: Request, res: Response<ApiResponse>): Promise<void> {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) {
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          message: 'User authentication required'
+        };
+        res.status(401).json(errorResponse);
+        return;
+      }
+
+      // Set a longer timeout for this operation (60 seconds)
+      const timeout = setTimeout(() => {
+        // Timeout handler (operation continues)
+      }, 50000);
+
+      try {
+        const result = await this.scheduleService.generateSchedules(req.body, userId);
+        clearTimeout(timeout);
+        
+        const successResponse: ApiSuccessResponse = {
+          success: true,
+          message: `Successfully generated ${result.created.length} schedules. ${result.skipped} date(s) skipped due to existing slots or past dates.`,
+          data: {
+            created: result.created.length,
+            skipped: result.skipped,
+            skippedDates: result.skippedDates,
+            slots: result.created,
+          }
+        };
+
+        res.status(201).json(successResponse);
+      } catch (error) {
+        clearTimeout(timeout);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Generate schedules error:', error);
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to generate schedules'
+      };
+      res.status(400).json(errorResponse);
     }
   }
 }
