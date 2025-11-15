@@ -57,24 +57,42 @@ export class DashboardService {
     this.prisma = new PrismaClient();
   }
 
-  async getDashboardStats(): Promise<DashboardStats> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+  async getDashboardStats(month?: number, year?: number): Promise<DashboardStats> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
+    // Calculate date range based on month/year or default to last 30 days
+    let dateFrom: Date;
+    let dateTo: Date;
+    
+    if (month && year) {
+      // First day of selected month (month is 1-indexed, Date uses 0-indexed)
+      dateFrom = new Date(year, month - 1, 1);
+      dateFrom.setHours(0, 0, 0, 0);
+      
+      // Always use the last day of the selected month (not today, even if current month)
+      // Last day of the month: new Date(year, month, 0) where month is 0-indexed
+      // Since month is 1-indexed, we use month (not month-1) to get last day
+      dateTo = new Date(year, month, 0); // Last day of month
+      dateTo.setHours(23, 59, 59, 999);
+    } else {
+      // Default: last 30 days
+      dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - 30);
+      dateTo = new Date(today);
+    }
     
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get slot statistics
+    // Get slot statistics - count all slots scheduled in the selected period
+    // This includes all slots regardless of status (available, booked, cancelled, expired, maintenance)
+    // Filter by date (slot's scheduled date) not createdAt (when slot was created)
     const slotStats = await this.prisma.visitSlot.aggregate({
       where: {
         date: {
-          gte: thirtyDaysAgo
+          gte: dateFrom,
+          lte: dateTo
         }
       },
       _count: true,
@@ -84,33 +102,88 @@ export class DashboardService {
       }
     });
 
-    const todaySlots = await this.prisma.visitSlot.count({
-      where: {
-        date: today
+    // Today's visits: The number of visit slots scheduled for today within the selected month/year period
+    // This shows how many time slots are available or have bookings for the current day
+    // Only count if today falls within the selected period
+    let todaySlots = 0;
+    if (month && year) {
+      // Check if today is within the selected month/year
+      const isTodayInSelectedPeriod = 
+        today.getFullYear() === year && 
+        today.getMonth() + 1 === month;
+      
+      if (isTodayInSelectedPeriod) {
+        // Count all slots scheduled for today (regardless of status)
+        todaySlots = await this.prisma.visitSlot.count({
+          where: {
+            date: today
+          }
+        });
       }
-    });
+    } else {
+      // Default: count slots for today
+      todaySlots = await this.prisma.visitSlot.count({
+        where: {
+          date: today
+        }
+      });
+    }
 
+    // Upcoming Visits: Shows visit slots with confirmed or tentative bookings in the selected month/year
+    // These are upcoming time slots that have not yet occurred
+    // Filter by: date in selected period AND date >= tomorrow AND has confirmed/tentative bookings
+    const tomorrowForCount = new Date(today);
+    tomorrowForCount.setDate(tomorrowForCount.getDate() + 1);
+    tomorrowForCount.setHours(0, 0, 0, 0);
+    
     const upcomingSlots = await this.prisma.visitSlot.count({
       where: {
-        date: {
-          gt: today
-        }
+        AND: [
+          {
+            date: {
+              gte: dateFrom,
+              lte: dateTo
+            }
+          },
+          {
+            date: {
+              gte: tomorrowForCount // Must be in the future (tomorrow or later)
+            }
+          },
+          {
+            bookings: {
+              some: {
+                status: {
+                  in: ['confirmed', 'tentative']
+                }
+              }
+            }
+          }
+        ]
       }
     });
 
+    // Available slots: Count of visit slots with status 'available' scheduled in the selected period
+    // These slots are open for new bookings
+    // Criteria: status = 'available' AND date (slot's scheduled date) in selected period
     const availableSlots = await this.prisma.visitSlot.count({
       where: {
         status: 'available',
         date: {
-          gte: thirtyDaysAgo
+          gte: dateFrom,
+          lte: dateTo
         }
       }
     });
 
-    // Slots that have any active bookings (confirmed or tentative) in the last 30 days
+  
+    // Slots that have any active bookings (confirmed or tentative) in the selected period
     const bookedSlots = await this.prisma.visitSlot.count({
       where: {
-        date: { gte: thirtyDaysAgo },
+        date: { 
+          gte: dateFrom,
+          lte: dateTo
+        },
         bookings: {
           some: {
             status: { in: ['confirmed', 'tentative'] as any }
@@ -119,12 +192,15 @@ export class DashboardService {
       }
     });
 
-    // Get revenue statistics for today
+    // Get revenue statistics for the selected period
     const revenueStats = await this.prisma.booking.aggregate({
       where: {
         status: 'confirmed',
         slot: {
-          date: today
+          date: {
+            gte: dateFrom,
+            lte: dateTo
+          }
         }
       },
       _sum: {
@@ -134,19 +210,31 @@ export class DashboardService {
       _count: true
     });
 
-    // Total visitors with at least one COMPLETED booking (overall)
-    const completedVisitorsGrouped = await this.prisma.booking.groupBy({
+    // Total unique visitors with confirmed or completed bookings in the selected period
+    const visitorsGrouped = await this.prisma.booking.groupBy({
       by: ['visitorId'],
-      where: { status: 'completed' },
+      where: {
+        status: {
+          in: ['confirmed', 'completed'] as any
+        },
+        slot: {
+          date: {
+            gte: dateFrom,
+            lte: dateTo
+          }
+        }
+      },
       _count: { visitorId: true }
     });
-    const totalVisitorsCompleted = completedVisitorsGrouped.length;
+    const totalVisitors = visitorsGrouped.length;
 
-    // Get capacity utilization for last 7 days
+    // Get capacity utilization for the selected period (month/year)
+    // This calculates the percentage of total available capacity that has been booked
     const capacityStats = await this.prisma.visitSlot.aggregate({
       where: {
         date: {
-          gte: sevenDaysAgo
+          gte: dateFrom,
+          lte: dateTo
         }
       },
       _sum: {
@@ -165,35 +253,68 @@ export class DashboardService {
       upcomingVisits: upcomingSlots,
       availableSlots,
       bookedSlots,
-      // Prefer visitors with completed bookings; fallback to today's confirmed group size sum
-      totalVisitors: totalVisitorsCompleted || revenueStats._sum.groupSize || 0,
+      // Unique visitors with confirmed or completed bookings in the selected period
+      totalVisitors: totalVisitors,
       totalBookings: revenueStats._count || 0,
       revenue: revenueStats._sum.totalAmount?.toNumber() || 0,
       capacityUtilization: Math.round(utilizationPercentage * 100) / 100
     };
   }
 
-  async getUpcomingVisits(limit: number = 5): Promise<UpcomingVisit[]> {
+  async getUpcomingVisits(limit: number = 5, month?: number, year?: number): Promise<UpcomingVisit[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    let dateFrom: Date;
+    let dateTo: Date;
+    
+    if (month && year) {
+      // First day of selected month
+      dateFrom = new Date(year, month - 1, 1);
+      dateFrom.setHours(0, 0, 0, 0);
+      
+      // Always use the last day of the selected month (not today, even if current month)
+      dateTo = new Date(year, month, 0); // Last day of the month
+      dateTo.setHours(23, 59, 59, 999);
+    } else {
+      // Default: from today onwards
+      dateFrom = today;
+      dateTo = new Date(today);
+      dateTo.setDate(dateTo.getDate() + 30); // Next 30 days
+    }
+
+    // Get slots in the selected period that have confirmed or tentative bookings
+    // These are upcoming time slots that have not yet occurred (date > today)
+    // Ordered by date and start time
+    // For date comparison: use gte with tomorrow (today + 1 day) to ensure we only get future dates
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Only get TODAY's slots that have confirmed or tentative bookings
+    tomorrow.setHours(0, 0, 0, 0);
+    
     const upcomingSlots = await this.prisma.visitSlot.findMany({
       where: {
-        date: {
-          gte: today,
-          lt: tomorrow
-        },
-        bookings: {
-          some: {
-            status: {
-              in: ['confirmed', 'tentative']
+        AND: [
+          {
+            date: {
+              gte: dateFrom,
+              lte: dateTo
+            }
+          },
+          {
+            date: {
+              gte: tomorrow // Must be in the future (tomorrow or later)
+            }
+          },
+          {
+            bookings: {
+              some: {
+                status: {
+                  in: ['confirmed', 'tentative']
+                }
+              }
             }
           }
-        }
+        ]
       },
       include: {
         bookings: {
@@ -213,6 +334,7 @@ export class DashboardService {
       ],
       take: limit
     });
+    
 
     return upcomingSlots.map(slot => {
       const now = new Date();
@@ -306,26 +428,54 @@ export class DashboardService {
     });
   }
 
-  async getRevenueTrend(days: number = 7): Promise<Array<{date: string, revenue: number}>> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+  async getRevenueTrend(month?: number, year?: number): Promise<Array<{date: string, revenue: number}>> {
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (month && year) {
+      // First day of selected month
+      startDate = new Date(year, month - 1, 1);
+      startDate.setHours(0, 0, 0, 0);
+      
+      // Last day of selected month, or today if current month
+      const today = new Date();
+      const isCurrentMonth = month === today.getMonth() + 1 && year === today.getFullYear();
+      if (isCurrentMonth) {
+        endDate = new Date(today);
+      } else {
+        endDate = new Date(year, month, 0); // Last day of the month
+        endDate.setHours(23, 59, 59, 999);
+      }
+    } else {
+      // Default: last 7 days
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      endDate = new Date();
+    }
 
     const bookings = await this.prisma.booking.findMany({
       where: {
         status: 'confirmed',
-        createdAt: {
-          gte: startDate
+        slot: {
+          date: {
+            gte: startDate,
+            lte: endDate
+          }
         }
       },
       select: {
-        createdAt: true,
-        totalAmount: true
+        totalAmount: true,
+        slot: {
+          select: {
+            date: true
+          }
+        }
       }
     });
 
-    // Group by date and sum revenue
+    // Group by slot date and sum revenue
     const revenueByDate = bookings.reduce((acc, booking) => {
-      const date = booking.createdAt.toISOString().split('T')[0];
+      const date = booking.slot.date.toISOString().split('T')[0];
       acc[date] = (acc[date] || 0) + booking.totalAmount.toNumber();
       return acc;
     }, {} as Record<string, number>);

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { registerUser, getUserProfile, createStaffUser, resetStaffPassword } from '../controllers/userController';
+import { registerUser, getUserProfile, createStaffUser, resetStaffPassword, getStaffUsers, deactivateUser, activateUser } from '../controllers/userController';
 import { 
   validateUserRegistration, 
   validateUserProfileUpdate,
@@ -21,6 +21,15 @@ router.post('/staff', authenticateToken, requireAdmin, validateStaffUserCreation
 
 // PUT /api/v1/user/staff/reset-password - Reset staff password (admin only, requires admin password confirmation)
 router.put('/staff/reset-password', authenticateToken, requireAdmin, validateResetStaffPassword, handleValidationErrors, resetStaffPassword);
+
+// GET /api/v1/user/staff - Get all staff users (admin only)
+router.get('/staff', authenticateToken, requireAdmin, getStaffUsers);
+
+// PUT /api/v1/user/:id/deactivate - Deactivate user (admin only)
+router.put('/:id/deactivate', authenticateToken, requireAdmin, validateUUID, handleValidationErrors, deactivateUser);
+
+// PUT /api/v1/user/:id/activate - Activate user (admin only)
+router.put('/:id/activate', authenticateToken, requireAdmin, validateUUID, handleValidationErrors, activateUser);
 
 // PUT /api/v1/user/:id/profile - Update user profile (placeholder for future implementation)
 // router.put('/:id/profile', validateUUID, validateUserProfileUpdate, handleValidationErrors, updateUserProfile);

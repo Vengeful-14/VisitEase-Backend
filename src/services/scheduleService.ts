@@ -93,6 +93,8 @@ export class ScheduleService {
 
   async getSlots(filters: {
     dateRange?: string;
+    dateFrom?: Date | string;
+    dateTo?: Date | string;
     status?: string;
     search?: string;
     page?: number;
@@ -101,13 +103,21 @@ export class ScheduleService {
     
     const where: any = {};
 
-    // Date range filter
+    // Date range filter - support both dateRange string and dateFrom/dateTo
     if (filters.dateRange) {
       const [startDate, endDate] = filters.dateRange.split(' to ');
       where.date = {
         gte: new Date(startDate),
         lte: new Date(endDate)
       };
+    } else if (filters.dateFrom || filters.dateTo) {
+      where.date = {};
+      if (filters.dateFrom) {
+        where.date.gte = filters.dateFrom instanceof Date ? filters.dateFrom : new Date(filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        where.date.lte = filters.dateTo instanceof Date ? filters.dateTo : new Date(filters.dateTo);
+      }
     }
 
     // Status filter
@@ -178,14 +188,6 @@ export class ScheduleService {
   }
 
   async createSlot(slotData: any, userId: string): Promise<VisitSlot> {
-    console.log('ScheduleService - createSlot called with data:', {
-      date: slotData.date,
-      dateType: typeof slotData.date,
-      startTime: slotData.startTime,
-      endTime: slotData.endTime,
-      capacity: slotData.capacity
-    });
-
     // Validate slot data
     await this.validateSlotData(slotData);
 
@@ -203,19 +205,12 @@ export class ScheduleService {
     
     // Parse date properly - handle both Date objects and date strings
     let parsedDate: Date;
-    console.log('ScheduleService - Parsing date:', {
-      originalDate: slotData.date,
-      dateType: typeof slotData.date,
-      isDate: slotData.date instanceof Date
-    });
 
     if (slotData.date instanceof Date) {
       parsedDate = slotData.date;
-      console.log('ScheduleService - Date is already a Date object');
     } else if (typeof slotData.date === 'string') {
       // Handle date string - try to parse it
       const dateStr = slotData.date.trim();
-      console.log('ScheduleService - Processing date string:', dateStr);
       
       // Check if date string is empty
       if (!dateStr) {
@@ -225,26 +220,17 @@ export class ScheduleService {
       if (dateStr.includes('T')) {
         // ISO string format
         parsedDate = new Date(dateStr);
-        console.log('ScheduleService - Parsed as ISO string');
       } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
         // Date only format (YYYY-MM-DD) - create date in UTC to avoid timezone issues
         const isoString = dateStr + 'T00:00:00.000Z';
         parsedDate = new Date(isoString);
-        console.log('ScheduleService - Parsed as YYYY-MM-DD format:', isoString);
       } else {
         // Try to parse as regular date string
         parsedDate = new Date(dateStr);
-        console.log('ScheduleService - Parsed as regular date string');
       }
     } else {
       throw new Error('Invalid date format');
     }
-
-    console.log('ScheduleService - Final parsed date:', {
-      parsedDate,
-      isValid: !isNaN(parsedDate.getTime()),
-      isoString: parsedDate.toISOString()
-    });
 
     // Validate the parsed date
     if (isNaN(parsedDate.getTime())) {
@@ -284,11 +270,6 @@ export class ScheduleService {
   }
 
   async updateSlot(id: string, updates: Partial<VisitSlot> & { date?: Date | string }, userId: string): Promise<VisitSlot> {
-    console.log('ScheduleService - updateSlot called with:', {
-      id,
-      updates,
-      userId
-    });
 
     // Get current slot data
     const currentSlot = await this.getSlotById(id);
@@ -359,8 +340,6 @@ export class ScheduleService {
       throw new Error('No valid fields to update');
     }
 
-    console.log('ScheduleService - Final update data:', updateData);
-
     const slot = await this.prisma.visitSlot.update({
       where: { id },
       data: updateData
@@ -429,36 +408,55 @@ export class ScheduleService {
     }
   }
 
-  async getScheduleStats(): Promise<ScheduleStats> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  async getScheduleStats(month?: number, year?: number): Promise<ScheduleStats> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate date range based on month/year or default to last 30 days
+    let dateFrom: Date;
+    let dateTo: Date;
+    
+    if (month && year) {
+      // First day of selected month (month is 1-indexed, Date uses 0-indexed)
+      dateFrom = new Date(year, month - 1, 1);
+      dateFrom.setHours(0, 0, 0, 0);
+      
+      // Always use the last day of the selected month (not today, even if current month)
+      dateTo = new Date(year, month, 0); // Last day of month
+      dateTo.setHours(23, 59, 59, 999);
+    } else {
+      // Default: last 30 days
+      dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - 30);
+      dateTo = new Date(today);
+    }
 
     const [totalSlots, availableSlots, bookedSlots, avgCapacity, avgBookings, capacityStats] = await Promise.all([
       this.prisma.visitSlot.count({
-        where: { date: { gte: thirtyDaysAgo } }
+        where: { date: { gte: dateFrom, lte: dateTo } }
       }),
       this.prisma.visitSlot.count({
         where: { 
-          date: { gte: thirtyDaysAgo },
+          date: { gte: dateFrom, lte: dateTo },
           status: 'available'
         }
       }),
       this.prisma.visitSlot.count({
         where: { 
-          date: { gte: thirtyDaysAgo },
+          date: { gte: dateFrom, lte: dateTo },
           status: 'booked'
         }
       }),
       this.prisma.visitSlot.aggregate({
-        where: { date: { gte: thirtyDaysAgo } },
+        where: { date: { gte: dateFrom, lte: dateTo } },
         _avg: { capacity: true }
       }),
       this.prisma.visitSlot.aggregate({
-        where: { date: { gte: thirtyDaysAgo } },
+        where: { date: { gte: dateFrom, lte: dateTo } },
         _avg: { bookedCount: true }
       }),
       this.prisma.visitSlot.aggregate({
-        where: { date: { gte: thirtyDaysAgo } },
+        where: { date: { gte: dateFrom, lte: dateTo } },
         _sum: { capacity: true, bookedCount: true }
       })
     ]);
@@ -590,7 +588,13 @@ export class ScheduleService {
 
   private async validateSlotData(slotData: any): Promise<void> {
     // Validate date is not in the past
-    if (new Date(slotData.date) < new Date()) {
+    // Normalize dates to midnight for accurate comparison
+    const slotDate = new Date(slotData.date);
+    slotDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (slotDate < today) {
       throw new Error('Cannot create slots in the past');
     }
 
@@ -763,5 +767,392 @@ export class ScheduleService {
     const totalSeconds2 = h2 * 3600 + m2 * 60 + s2;
     
     return totalSeconds1 - totalSeconds2;
+  }
+
+  async generateSchedules(
+    options: {
+      month: number;
+      year: number;
+      dayStartTime: string;
+      dayEndTime: string;
+      slotDuration: number;
+      capacity: number;
+      excludedDays?: number[];
+      vacantRanges?: Array<{ startTime: string; endTime: string }>;
+    },
+    userId: string
+  ): Promise<{ created: VisitSlot[]; skipped: number; skippedDates: string[] }> {
+    const { month, year, dayStartTime, dayEndTime, slotDuration, capacity, excludedDays = [], vacantRanges = [] } = options;
+
+    // Validate inputs
+    if (month < 1 || month > 12) {
+      throw new Error('Invalid month');
+    }
+    if (year < 2020 || year > 2100) {
+      throw new Error('Invalid year');
+    }
+    if (slotDuration < 15 || slotDuration > 480) {
+      throw new Error('Slot duration must be between 15 and 480 minutes');
+    }
+    if (capacity < 1 || capacity > 1000) {
+      throw new Error('Capacity must be between 1 and 1000');
+    }
+
+    // Validate and format times
+    const startTime = this.validateAndFormatTime(dayStartTime);
+    const endTime = this.validateAndFormatTime(dayEndTime);
+    
+    if (this.compareTimeStrings(startTime, endTime) >= 0) {
+      throw new Error('Day end time must be after day start time');
+    }
+
+    // Validate vacant ranges
+    for (const range of vacantRanges) {
+      const rangeStart = this.validateAndFormatTime(range.startTime);
+      const rangeEnd = this.validateAndFormatTime(range.endTime);
+      
+      if (this.compareTimeStrings(rangeStart, rangeEnd) >= 0) {
+        throw new Error(`Invalid vacant range: ${range.startTime} - ${range.endTime}`);
+      }
+      
+      // Check if range is within day time slot
+      if (this.compareTimeStrings(rangeStart, startTime) < 0 || this.compareTimeStrings(rangeEnd, endTime) > 0) {
+        throw new Error(`Vacant range ${range.startTime} - ${range.endTime} is outside day time slot ${dayStartTime} - ${dayEndTime}`);
+      }
+    }
+
+    // Check for overlapping vacant ranges
+    for (let i = 0; i < vacantRanges.length; i++) {
+      for (let j = i + 1; j < vacantRanges.length; j++) {
+        const range1Start = this.validateAndFormatTime(vacantRanges[i].startTime);
+        const range1End = this.validateAndFormatTime(vacantRanges[i].endTime);
+        const range2Start = this.validateAndFormatTime(vacantRanges[j].startTime);
+        const range2End = this.validateAndFormatTime(vacantRanges[j].endTime);
+        
+        if (this.compareTimeStrings(range1Start, range2End) < 0 && this.compareTimeStrings(range2Start, range1End) < 0) {
+          throw new Error(`Vacant ranges overlap: ${vacantRanges[i].startTime}-${vacantRanges[i].endTime} and ${vacantRanges[j].startTime}-${vacantRanges[j].endTime}`);
+        }
+      }
+    }
+
+    // Get existing slots for the month to exclude dates
+    const startDate = new Date(year, month - 1, 1);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(year, month, 0); // Last day of month (day 0 of next month)
+    endDate.setHours(23, 59, 59, 999);
+    
+    const existingSlots = await this.prisma.visitSlot.findMany({
+      where: {
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        date: true,
+      },
+    });
+
+    const existingDates = new Set<string>();
+    existingSlots.forEach(slot => {
+      const slotDate = slot.date instanceof Date ? slot.date : new Date(slot.date);
+      const slotYear = slotDate.getFullYear();
+      const slotMonth = slotDate.getMonth() + 1; // getMonth() returns 0-11
+      
+      // Only include dates that are in the selected month and year
+      if (slotYear === year && slotMonth === month) {
+        const dateStr = `${slotYear}-${String(slotMonth).padStart(2, '0')}-${String(slotDate.getDate()).padStart(2, '0')}`;
+        existingDates.add(dateStr);
+      }
+    });
+    
+    // Validation: Check if there are any existing slots for dates that would be generated
+    // Calculate which dates would be generated (excluding excluded days and past dates)
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const nowForValidation = new Date();
+    const todayUTC = new Date(Date.UTC(nowForValidation.getUTCFullYear(), nowForValidation.getUTCMonth(), nowForValidation.getUTCDate(), 0, 0, 0, 0));
+    const datesToGenerate: string[] = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      const dayOfWeek = date.getUTCDay();
+      
+      // Skip excluded days
+      if (excludedDays.includes(dayOfWeek)) {
+        continue;
+      }
+      
+      // Skip past dates
+      if (date < todayUTC) {
+        continue;
+      }
+      
+      // Only include dates in the selected month
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      datesToGenerate.push(dateStr);
+    }
+    
+    // Check if any dates to generate already have slots (only dates in selected month)
+    const conflictingDates = datesToGenerate.filter(dateStr => {
+      // Double-check that the date is in the selected month
+      const [dateYear, dateMonth] = dateStr.split('-').map(Number);
+      if (dateYear !== year || dateMonth !== month) {
+        return false; // Skip dates not in selected month
+      }
+      return existingDates.has(dateStr);
+    });
+    
+    if (conflictingDates.length > 0) {
+      const datesList = conflictingDates.slice(0, 10).join(', ') + (conflictingDates.length > 10 ? ` and ${conflictingDates.length - 10} more` : '');
+      throw new Error(
+        `Cannot generate schedules: ${conflictingDates.length} date(s) in ${month}/${year} already have existing visit slots: ${datesList}. ` +
+        `Please delete existing slots for these dates or select a different month/year.`
+      );
+    }
+
+    // Generate time slots for a day
+    const generateTimeSlots = (start: string, end: string, duration: number): string[] => {
+      const slots: string[] = [];
+      const [startHour, startMin] = start.split(':').map(Number);
+      const [endHour, endMin] = end.split(':').map(Number);
+      
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      
+      let currentMinutes = startMinutes;
+      
+      while (currentMinutes + duration <= endMinutes) {
+        const slotStartHour = Math.floor(currentMinutes / 60);
+        const slotStartMin = currentMinutes % 60;
+        const slotStartTime = `${String(slotStartHour).padStart(2, '0')}:${String(slotStartMin).padStart(2, '0')}`;
+        
+        // Check if slot falls in any vacant range
+        let isInVacantRange = false;
+        for (const range of vacantRanges) {
+          const rangeStart = this.validateAndFormatTime(range.startTime);
+          const rangeEnd = this.validateAndFormatTime(range.endTime);
+          const slotTime = `${slotStartTime}:00`;
+          
+          if (this.compareTimeStrings(slotTime, rangeStart) >= 0 && this.compareTimeStrings(slotTime, rangeEnd) < 0) {
+            isInVacantRange = true;
+            break;
+          }
+        }
+        
+        if (!isInVacantRange) {
+          slots.push(slotStartTime);
+        }
+        
+        currentMinutes += duration;
+      }
+      
+      return slots;
+    };
+
+    const allTimeSlots = generateTimeSlots(startTime.substring(0, 5), endTime.substring(0, 5), slotDuration);
+    
+    if (allTimeSlots.length === 0) {
+      throw new Error('No time slots can be generated with the current configuration');
+    }
+
+    // Generate schedules
+    const createdSlots: VisitSlot[] = [];
+    const skippedDates: string[] = [];
+    const slotsToCreate: Array<{
+      date: Date;
+      startTime: string;
+      endTime: string;
+      durationMinutes: number;
+      capacity: number;
+      bookedCount: number;
+      status: 'available';
+      description: string | null;
+      createdBy: string;
+    }> = [];
+    
+    // Get today's date at midnight UTC for comparison
+    const nowForGeneration = new Date();
+    const today = new Date(Date.UTC(nowForGeneration.getUTCFullYear(), nowForGeneration.getUTCMonth(), nowForGeneration.getUTCDate(), 0, 0, 0, 0));
+
+    const firstDayOfMonth = new Date(year, month - 1, 1);
+    firstDayOfMonth.setHours(0, 0, 0, 0);
+    const lastDayOfMonth = new Date(year, month, 0);
+    lastDayOfMonth.setHours(0, 0, 0, 0);
+    
+    let daysProcessed = 0;
+    let daysSkippedExcluded = 0;
+    let daysSkippedPast = 0;
+    let daysSkippedExisting = 0;
+    let daysGenerated = 0;
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      // Create date object for this day - use UTC to avoid timezone issues
+      const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      const dayOfWeek = date.getUTCDay(); // Use UTC day of week
+      
+      // Format date as YYYY-MM-DD for comparison
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      
+      daysProcessed++;
+      
+      // Skip excluded days
+      if (excludedDays.includes(dayOfWeek)) {
+        daysSkippedExcluded++;
+        continue;
+      }
+      
+      // Skip dates that are in the past (compare dates only, not time)
+      // Compare UTC dates
+      if (date < today) {
+        skippedDates.push(dateStr);
+        daysSkippedPast++;
+        continue;
+      }
+      
+      // Skip dates that already have slots
+      if (existingDates.has(dateStr)) {
+        skippedDates.push(dateStr);
+        daysSkippedExisting++;
+        continue;
+      }
+      
+      daysGenerated++;
+      
+      // Generate slots for this day
+      // Create date in UTC to avoid timezone issues - use UTC midnight
+      const slotDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      
+      // Prepare all slots for this day
+      const slotsForDay = allTimeSlots.map(slotStartTime => {
+        const [startHour, startMin] = slotStartTime.split(':').map(Number);
+        const slotEndMinutes = startHour * 60 + startMin + slotDuration;
+        const slotEndHour = Math.floor(slotEndMinutes / 60);
+        const slotEndMin = slotEndMinutes % 60;
+        const slotEndTime = `${String(slotEndHour).padStart(2, '0')}:${String(slotEndMin).padStart(2, '0')}`;
+        
+        return {
+          date: new Date(slotDate), // Create a copy for each slot (UTC date)
+          startTime: `${slotStartTime}:00`,
+          endTime: `${slotEndTime}:00`,
+          durationMinutes: slotDuration,
+          capacity: capacity,
+          bookedCount: 0,
+          status: 'available' as const,
+          description: null,
+          createdBy: userId,
+        };
+      });
+      
+      // Add to batch
+      slotsToCreate.push(...slotsForDay);
+    }
+    
+    if (slotsToCreate.length === 0) {
+      return {
+        created: [],
+        skipped: skippedDates.length,
+        skippedDates: skippedDates,
+      };
+    }
+    
+    // Batch create all slots at once (much faster)
+    const batchSize = 100; // Create 100 slots at a time
+    let totalCreated = 0;
+    
+    for (let i = 0; i < slotsToCreate.length; i += batchSize) {
+      const batch = slotsToCreate.slice(i, i + batchSize);
+      
+      try {
+        // Filter and validate batch before creating
+        // Note: Past dates are already filtered out in the main loop, so we only validate time ranges here
+        const validBatch = batch.filter(slotData => {
+          // Double-check date is not in the past (defensive check)
+          const slotDate = new Date(slotData.date);
+          slotDate.setHours(0, 0, 0, 0);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (slotDate < today) {
+            return false; // Skip past dates
+          }
+          
+          // Validate time range
+          try {
+            const startTime = this.validateAndFormatTime(slotData.startTime);
+            const endTime = this.validateAndFormatTime(slotData.endTime);
+            
+            if (this.compareTimeStrings(startTime, endTime) >= 0) {
+              return false;
+            }
+          } catch (error) {
+            return false;
+          }
+          
+          return true;
+        });
+        
+        if (validBatch.length === 0) {
+          continue;
+        }
+        
+        // Create batch
+        const result = await this.prisma.visitSlot.createMany({
+          data: validBatch.map(slot => ({
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            durationMinutes: slot.durationMinutes,
+            capacity: slot.capacity,
+            bookedCount: slot.bookedCount,
+            status: slot.status,
+            description: slot.description,
+            createdBy: slot.createdBy,
+          })),
+          skipDuplicates: true, // Skip if slot already exists
+        });
+        
+        totalCreated += result.count;
+      } catch (error) {
+        console.error(`Error creating batch ${Math.floor(i / batchSize) + 1}:`, error);
+        // Continue with next batch even if one fails
+      }
+    }
+    
+    // Fetch created slots to return them (optional - for detailed response)
+    if (totalCreated > 0) {
+      try {
+        const startDate = new Date(year, month - 1, 1);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(year, month, 0);
+        endDate.setHours(23, 59, 59, 999);
+        
+        const fetchedSlots = await this.prisma.visitSlot.findMany({
+          where: {
+            date: {
+              gte: startDate,
+              lte: endDate,
+            },
+            createdBy: userId,
+            createdAt: {
+              gte: new Date(Date.now() - 120000), // Created in the last 2 minutes
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: Math.min(totalCreated, 1000), // Limit to 1000 slots for response
+        });
+        
+        createdSlots.push(...fetchedSlots.map(slot => this.transformVisitSlot(slot)));
+      } catch (error) {
+        // Continue even if fetch fails
+      }
+    }
+
+    return {
+      created: createdSlots, // Return fetched slots (may be limited)
+      skipped: skippedDates.length,
+      skippedDates: skippedDates,
+    };
   }
 }

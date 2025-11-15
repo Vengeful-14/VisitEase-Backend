@@ -198,3 +198,59 @@ export const updateUserPassword = async (userId: string, passwordHash: string): 
     throw error;
   }
 };
+
+// Get all staff users (admin only)
+export const getAllStaffUsers = async (): Promise<UserResponse[]> => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'staff',
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        emailVerified: true,
+        phone: true,
+        createdAt: true,
+        updatedAt: true,
+        lastLoginAt: true,
+        isActive: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return users;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Update user active status (deactivate/activate)
+export const updateUserActiveStatus = async (userId: string, isActive: boolean): Promise<UserResponse> => {
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        emailVerified: true,
+        phone: true,
+        createdAt: true,
+        updatedAt: true,
+        lastLoginAt: true,
+        isActive: true,
+      },
+    });
+    return user;
+  } catch (error) {
+    throw error;
+  }
+};

@@ -260,9 +260,6 @@ export class BookingController {
       // Note: Status might be 'booked' but still have capacity if status wasn't updated correctly
       const isSlotBookable = slot.status !== 'cancelled' && slot.status !== 'expired';
       const canAccommodate = availableCapacity >= groupSize && availableCapacity > 0 && isSlotBookable;
-      
-      // Debug logging
-      console.log(`[Availability Check] Slot: ${slotId}, Status: ${slot.status}, Capacity: ${slot.capacity}, Booked: ${totalBookedCapacity}, Available: ${availableCapacity}, Requested: ${groupSize}, Can Accommodate: ${canAccommodate}`);
 
       const successResponse: ApiSuccessResponse = {
         success: true,

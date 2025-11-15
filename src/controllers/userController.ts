@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { createUser, findUserByEmail, findUserById, findUserByIdWithPassword, updateUserPassword } from '../queries/userQueries';
+import { createUser, findUserByEmail, findUserById, findUserByIdWithPassword, updateUserPassword, getAllStaffUsers, updateUserActiveStatus } from '../queries/userQueries';
 import { CreateUserData, UserRegistrationRequest, ApiResponse, ApiErrorResponse, ApiSuccessResponse, AuthRequest } from '../type';
 
 // User registration controller
@@ -49,6 +49,154 @@ export const registerUser = async (req: Request<{}, ApiResponse, UserRegistratio
     const errorResponse: ApiErrorResponse = {
       success: false,
       message: 'Internal server error during registration',
+    };
+    res.status(500).json(errorResponse);
+  }
+};
+
+// Get all staff users controller (admin only)
+export const getStaffUsers = async (req: AuthRequest, res: Response<ApiResponse>): Promise<void> => {
+  try {
+    const staffUsers = await getAllStaffUsers();
+    
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'Staff users retrieved successfully',
+      data: {
+        users: staffUsers,
+      },
+    };
+    
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Get staff users error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Failed to retrieve staff users',
+    };
+    res.status(500).json(errorResponse);
+  }
+};
+
+// Deactivate user controller (admin only)
+export const deactivateUser = async (req: AuthRequest, res: Response<ApiResponse>): Promise<void> => {
+  try {
+    const userId = req.params.id;
+    
+    if (!userId) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'User ID is required',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+    
+    // Get user to verify it exists and is staff
+    const user = await findUserById(userId);
+    if (!user) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'User not found',
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+    
+    // Only allow deactivating staff users
+    if (user.role !== 'staff') {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Only staff users can be deactivated',
+      };
+      res.status(403).json(errorResponse);
+      return;
+    }
+    
+    // Prevent deactivating self
+    if (user.id === req.user!.userId) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'You cannot deactivate your own account',
+      };
+      res.status(403).json(errorResponse);
+      return;
+    }
+    
+    // Update user active status
+    const updatedUser = await updateUserActiveStatus(userId, false);
+    
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'User deactivated successfully',
+      data: {
+        user: updatedUser,
+      },
+    };
+    
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Deactivate user error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Failed to deactivate user',
+    };
+    res.status(500).json(errorResponse);
+  }
+};
+
+// Activate user controller (admin only)
+export const activateUser = async (req: AuthRequest, res: Response<ApiResponse>): Promise<void> => {
+  try {
+    const userId = req.params.id;
+    
+    if (!userId) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'User ID is required',
+      };
+      res.status(400).json(errorResponse);
+      return;
+    }
+    
+    // Get user to verify it exists and is staff
+    const user = await findUserById(userId);
+    if (!user) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'User not found',
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+    
+    // Only allow activating staff users
+    if (user.role !== 'staff') {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Only staff users can be activated',
+      };
+      res.status(403).json(errorResponse);
+      return;
+    }
+    
+    // Update user active status
+    const updatedUser = await updateUserActiveStatus(userId, true);
+    
+    const successResponse: ApiSuccessResponse = {
+      success: true,
+      message: 'User activated successfully',
+      data: {
+        user: updatedUser,
+      },
+    };
+    
+    res.status(200).json(successResponse);
+  } catch (error) {
+    console.error('Activate user error:', error);
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      message: 'Failed to activate user',
     };
     res.status(500).json(errorResponse);
   }
@@ -210,6 +358,25 @@ export const getUserProfile = async (req: AuthRequest, res: Response<ApiResponse
         message: 'User ID is required',
       };
       res.status(400).json(errorResponse);
+      return;
+    }
+
+    // Authorization: Staff users can only view their own profile, admins can view any profile
+    if (!req.user) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Authentication required',
+      };
+      res.status(401).json(errorResponse);
+      return;
+    }
+
+    if (req.user.role === 'staff' && req.user.userId !== userId) {
+      const errorResponse: ApiErrorResponse = {
+        success: false,
+        message: 'Insufficient permissions. Staff users can only view their own profile.',
+      };
+      res.status(403).json(errorResponse);
       return;
     }
 
